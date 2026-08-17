@@ -1,0 +1,10 @@
+## Interface: 11200
+## Title: Octo Survival Companion
+## Notes: Map, Trainer, Logbook, and Leveling Guide reference for the Turtle WoW / OctoWoW / CapyCraft "Survival" profession.
+## Author: Doug
+## Version: 1.5.1
+## SavedVariables: OctoSurvivalCompanionDB
+
+Data.lua
+Core.lua
+UI.lua
