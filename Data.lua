@@ -85,8 +85,15 @@ end
 OctoSurvivalCompanion_Data = {
 
     meta = {
-        version = "1.5.1",
-        lastUpdated = "2026-08-16",
+        -- 0.x.y (not 1.x.y) -- semver's own convention for pre-1.0/beta
+        -- software. CORRECTED 2026-08-17: was "1.5.1", which reads like a
+        -- mature post-1.0 release even though nothing has ever actually
+        -- shipped as a stable 1.0 -- this project is still beta. Bump the
+        -- minor (0.X) for meaningful feature work, the patch (.Y) for
+        -- fixes/data updates, same as normal semver, and move to 1.0.0
+        -- whenever it's actually considered done/stable.
+        version = "0.5.1",
+        lastUpdated = "2026-08-17",
         servers = { "Turtle WoW", "OctoWoW", "CapyCraft (Capybara Paradise)", "TurtleCraft" },
         disclaimer = "Community-sourced reference data, not an official API. Verify with /trade in game when in doubt.",
     },
@@ -599,12 +606,13 @@ OctoSurvivalCompanion_Data = {
     -- the gaps.
     --
     -- zoneCounts: approximate spawn counts per zone, pulled from the same
-    -- 2026-08-15 object-by-object check as chopZones above. This is used
-    -- ONLY as the last-resort "most populated" tiebreaker in
-    -- SC.JumpToTreeOnMap (UI.lua), when a tree-bar click can't find any
-    -- copy of that tier on your CURRENT continent at all -- the normal
-    -- case (you're on the right continent) always prefers the nearest
-    -- zone instead, which doesn't need this data. Deliberately partial:
+    -- 2026-08-15 object-by-object check as chopZones above. Shown next to
+    -- each zone in the Map tab's zone dropdown (e.g. "Winterspring (14)"
+    -- -- see BuildZoneDropdownList in Map.lua), and used by
+    -- IsZoneRareForTier (also Map.lua) to flag any zone at or below
+    -- RARE_ZONE_THRESHOLD as "(rare)"/"might be spillover" rather than
+    -- letting a 2-3 spawn zone read the same as a 50-spawn one.
+    -- Deliberately partial:
     -- a few zones didn't show a spawn count on their object's page at
     -- all (left out here, not zeroed), and the custom-zone entries
     -- (Blackstone Island, Thalassian Highlands, Northwind, Balor, Grim
@@ -619,13 +627,13 @@ OctoSurvivalCompanion_Data = {
     -- Searing Gorge 5 / Un'Goro Crater 5 / Azshara 4 / Darkshore 2 (Dead,
     -- re-verified 2026-08-16, see the note above the Dead tier below).
     -- Deliberately NOT removed from chopZones/zoneCounts -- they're
-    -- correct, just sparse -- instead UI.lua's RARE_ZONE_THRESHOLD flags
+    -- correct, just sparse -- instead Map.lua's RARE_ZONE_THRESHOLD flags
     -- any zone at or below 10 as "(rare)" wherever chop-zone lists are
     -- shown, so the tooltip stays complete AND honest about which spots
     -- are actually worth a trip.
     --
     -- spawnPoints ADDED 2026-08-17 for all 6 tiers -- individual spawn
-    -- "pips" for the Map tab (see RefreshMapPips in UI.lua), one {x,y}
+    -- "pips" for the Map tab (see RefreshMapPips in Map.lua), one {x,y}
     -- zone-local percent pair per known spawn. Pulled from octowow.st's
     -- raw page HTML for every tree object id in the #2020267-2020309
     -- range noted above (each object page embeds a myMapper.update({zone,
@@ -648,7 +656,7 @@ OctoSurvivalCompanion_Data = {
     -- rather than just discarding real data. A few zone names also came
     -- back from the site with typos (e.g. "Elwynn Forrest", "Ungoro
     -- Crater", "Hilsbrad Foothills") -- normalized to match this file's
-    -- own spelling so the UI.lua lookup (spawnPoints[zoneName]) actually
+    -- own spelling so the Map.lua lookup (spawnPoints[zoneName]) actually
     -- matches. Custom Turtle WoW zones (Blackstone Island, Thalassian
     -- Highlands, Northwind, Balor, Grim Reaches, Gilneas, Moonwhisper
     -- Coast, Tel'abim) have no entry here even where they're in
@@ -1224,7 +1232,7 @@ OctoSurvivalCompanion_Data = {
             -- the bare KALIMDOR CONTINENT map instead, in continent-relative
             -- percent coordinates -- a different coordinate space than the
             -- zone-local points below, which would need translating through
-            -- the Map tab's zoomed-crop math (see CreateZoomCrop in UI.lua)
+            -- the Map tab's zoomed-crop math (see CreateZoomCrop in Map.lua)
             -- rather than just being dropped in as-is. Left for a follow-up.
             spawnPoints = {
                 Winterspring = {
@@ -1292,10 +1300,10 @@ OctoSurvivalCompanion_Data = {
             -- octowow.st's object page plots them on the bare continent
             -- map since it doesn't recognize this custom Turtle WoW zone,
             -- so that's the coordinate space they were authored in.
-            -- Rendered by UI.lua's zoomed-crop fallback view (the one
+            -- Rendered by Map.lua's zoomed-crop fallback view (the one
             -- custom Turtle WoW zones get instead of a real client map),
             -- which is itself just a scaled/panned view of that same
-            -- continent art -- see RefreshZoomCropPips in UI.lua. Safe to
+            -- continent art -- see RefreshZoomCropPips in Map.lua. Safe to
             -- attribute the whole cluster to Moonwhisper Coast specifically
             -- (not split across multiple custom zones) because it's the
             -- ONLY custom Kalimdor zone that carries Star Wood.
@@ -1341,7 +1349,7 @@ OctoSurvivalCompanion_Data = {
             -- Azshara (4), and Darkshore (2) below are this object's own
             -- genuine, if sparse, spawn counts, not a nearby zone's trees
             -- getting mis-bucketed here. Kept in chopZones/zoneCounts
-            -- rather than removed -- see RARE_ZONE_THRESHOLD in UI.lua,
+            -- rather than removed -- see RARE_ZONE_THRESHOLD in Map.lua,
             -- which flags these as "(rare)" in the tooltip instead of
             -- deleting confirmed-correct data.
             -- RECONCILED 2026-08-16: the TurtleCraft forum "Survival Tree
@@ -1535,7 +1543,16 @@ OctoSurvivalCompanion_Data = {
         -- rough guess, placed in the ocean off the Tanaris coast per the
         -- same thematic/geographic reasoning that first suggested this
         -- zone name, not a measured coordinate.
-        { name = "Tel'abim", continent = "Kalimdor", x = 52, y = 85, tiers = { "Tropical" }, approxLocation = true },
+        -- areaId 5121 ("Tel'Abim") added 2026-08-17, same source and
+        -- reasoning as the 7 custom zones' areaId note above (pfQuest-
+        -- turtle's zones-turtle.lua + its enUS locale file) -- Tel'abim
+        -- itself isn't one of those 7 (it DOES have a real client map,
+        -- unlike them), but the areaId is still passed to
+        -- C_Map.GetMapOverlays(areaId) explicitly so the "revealed map"
+        -- feature resolves its real overlay data even if the map texture
+        -- turns out to be a borrowed/reused one, same reasoning as
+        -- Blackstone Island.
+        { name = "Tel'abim", continent = "Kalimdor", x = 52, y = 85, tiers = { "Tropical" }, approxLocation = true, areaId = 5121 },
         { name = "Durotar", continent = "Kalimdor", x = 68, y = 42, tiers = { "Simple" } },
         { name = "The Barrens", continent = "Kalimdor", x = 52, y = 48, tiers = { "Simple" } },
         { name = "Mulgore", continent = "Kalimdor", x = 42, y = 50, tiers = { "Simple" } },

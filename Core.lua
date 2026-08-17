@@ -67,17 +67,11 @@ local function SC_InitDB()
     if OctoSurvivalCompanionDB.faction == nil then
         OctoSurvivalCompanionDB.faction = nil -- set from UnitFactionGroup("player") or manually in the welcome screen
     end
-    if OctoSurvivalCompanionDB.hidePetNames == nil then
-        OctoSurvivalCompanionDB.hidePetNames = true -- show ???? for companion pets you haven't found yet
-    end
     if OctoSurvivalCompanionDB.showTreeBar == nil then
         OctoSurvivalCompanionDB.showTreeBar = true
     end
     if OctoSurvivalCompanionDB.announceNewTree == nil then
         OctoSurvivalCompanionDB.announceNewTree = true -- chat message when a new tree type is first recorded
-    end
-    if OctoSurvivalCompanionDB.useTomTom == nil then
-        OctoSurvivalCompanionDB.useTomTom = true -- best-effort TomTom waypoint on tree-icon click, see UI.lua
     end
 
     -- Minimap button position (angle in degrees around the minimap's rim)

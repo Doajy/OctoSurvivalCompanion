@@ -25,8 +25,12 @@ yourself.
   over areas you haven't personally explored yet — this addon is a
   reference tool, so seeing a spot before you've been there is the point.
   Without ClassicAPI, zone maps still work, just with the client's normal
-  fog on unexplored areas (same as the stock World Map) — see the note
-  above `RefreshMapOverlay` in `UI.lua`.
+  fog on unexplored areas (same as the stock World Map). Two custom zones,
+  **Blackstone Island** and **Tel'abim**, stay on the normal fogged look
+  even with ClassicAPI installed — confirmed 2026-08-17 there's genuinely
+  no reveal artwork on file for either one client-side, not a bug in this
+  addon, and the fogged look actually reads better for them anyway — see
+  the note above `RefreshMapOverlay` in `Map.lua`.
 - **Honest about sparse zones, without hiding them** — a handful of zones
   have confirmed-low spawn counts for a given tier (e.g. only 3 known
   Bright Wood spawns in Balor). Nothing gets deleted or hidden from the
@@ -103,7 +107,7 @@ Built against `## Interface: 11200` — the vanilla 1.12.1 API (Lua 5.0, not
 5.1), verified against the real 1.12.1 FrameXML client source where the
 behavior wasn't obvious (dropdown menu argument order, World Map tile
 naming, `ScrollFrame` methods, and so on — see the comments throughout
-`UI.lua`). Targets Turtle WoW and its 1.12.1-based clone servers: OctoWoW,
+`UI.lua`/`Panels.lua`/`Map.lua`). Targets Turtle WoW and its 1.12.1-based clone servers: OctoWoW,
 CapyCraft (Capybara Paradise), TurtleCraft, and similar. Not built for
 retail, Classic Era, or Season of Discovery clients.
 
@@ -201,7 +205,7 @@ this file.
 
 The Recipes and Gardening tabs are temporarily unwired from the tab bar
 while Map/Logbook work is in progress — the code that builds them
-(`CreateRecipeScroll`, `CreateGardeningPanel` in `UI.lua`) and the
+(`CreateRecipeScroll`, `CreateGardeningPanel` in `Panels.lua`) and the
 `Data.lua` tables they read from are all still there, so re-adding them is
 a quick wire-up rather than a rewrite.
 
@@ -212,9 +216,20 @@ OctoSurvivalCompanion/
 ├── OctoSurvivalCompanion.toc   addon manifest (Interface, title, saved variables)
 ├── Data.lua                    all reference data: trainers, recipes, wood tiers, zones, gardening
 ├── Core.lua                    saved variables, chop/pet tracking, slash commands
-├── UI.lua                      the browsable window (Map / Trainers / Logbook / Guide tabs)
+├── UI.lua                      main window shell: frame, tab switching, tree-chop bar, minimap button, welcome screen
+├── Panels.lua                  Recipes / Gardening / Trainers / Logbook / Guide tab content
+├── Map.lua                     the Map tab: continent/zone maps, spawn-point pips, reveal overlay
 └── README.md
 ```
+
+Split into these three UI files 2026-08-17 once `UI.lua` alone passed 2,700
+lines — `Map.lua` in particular had grown into its own largely
+self-contained subsystem (tile grids, pips, the reveal overlay, the
+zoomed-crop fallback, both picker dropdowns). Anything one file needs from
+another goes through the shared `SC` table (`SC.PANEL_WIDTH`, `SC.JoinList`,
+`SC.mainFrame`, `SC.CreateMapPanel`, etc.) rather than a bare local
+reference — Lua's `local` doesn't cross file boundaries, which is also
+what caused the `SC_InitDB` bug fixed earlier in this project's history.
 
 ## License
 
