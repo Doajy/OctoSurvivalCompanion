@@ -326,10 +326,14 @@ function SC.CreateMinimapButton()
     icon:SetWidth(20)
     icon:SetHeight(20)
     icon:SetPoint("TOPLEFT", btn, "TOPLEFT", 7, -6)
-    -- Same fallback log icon used throughout Data.lua (defaultTreeIcon) --
-    -- a standard vanilla icon file, not one of the server's custom item
-    -- icons, so it's guaranteed to exist even if a custom texture doesn't.
-    icon:SetTexture("Interface\\Icons\\INV_Misc_Log_02")
+    -- INV_Campfire -- a standard vanilla icon (used for the "Basic
+    -- Campfire" spell/item since early Classic, confirmed via web search
+    -- 2026-08-17, not a Turtle WoW custom texture), chosen because it's
+    -- reportedly the same icon Turtle WoW's own Survival skill shows in
+    -- the spellbook's General tab -- thematically right (survival/
+    -- wilderness) and guaranteed to actually exist, unlike guessing at an
+    -- unconfirmed custom icon filename would be.
+    icon:SetTexture("Interface\\Icons\\INV_Campfire")
 
     local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetWidth(31)
