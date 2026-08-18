@@ -1,3 +1,5 @@
+Extremely unfinished so take care when using
+
 # Octo Survival Companion
 
 An in-game reference and tracker addon for the custom **Survival** secondary
