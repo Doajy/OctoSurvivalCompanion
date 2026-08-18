@@ -708,12 +708,18 @@ end
 -- stretching the tiny 33-point cluster to fill the whole canvas scattered
 -- pips across Winterspring's unrelated landmass instead of clustering on
 -- the coast. Worse than no pips at all (actively misleading, not just
--- unhelpful), so backed out -- Moonwhisper Coast is back to the honest
--- "real map, no pip data yet" state Hyjal/Tel'abim already have. Actually
--- fixing this needs real zone-local coordinates gathered specifically
+-- unhelpful), so backed out -- Moonwhisper Coast went back to the honest
+-- "real map, no pip data yet" state Hyjal/Tel'abim still have. Actually
+-- fixing this needed real zone-local coordinates gathered specifically
 -- against THIS map view (in-game or a source that maps to it), not a
 -- transform of the continent-relative cluster -- that data was authored
 -- for an entirely different canvas and there's no sound way to convert it.
+-- DONE 2026-08-18: a first batch of exactly that (10 points, gathered
+-- in-game via Octo Node Scout's manual-log feature -- GetPlayerMapPosition
+-- against this same resolved map) is now in Data.lua's
+-- spawnPoints["Moonwhisper Coast"], read the normal way below like any
+-- other zone -- no special-casing needed here anymore. Partial, not a
+-- full census -- keep an eye out for zones that still come up sparse.
 --
 -- Plots one "pip" per individual spawn point Data.lua has on file for the
 -- currently picked tier over a zone's own client map (frame.zoneMapFrame)

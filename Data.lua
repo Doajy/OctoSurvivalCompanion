@@ -1291,6 +1291,27 @@ OctoSurvivalCompanion_Data = {
                 Ashenvale = {
                     {54.03,27.05},
                 },
+                -- ADDED 2026-08-18 -- Moonwhisper Coast's first REAL
+                -- zone-local spawn points, gathered in-game via the
+                -- separate Octo Node Scout addon's manual-log feature
+                -- (GetPlayerMapPosition against the zone's own resolved
+                -- map, SetMapToCurrentZone'd first -- genuinely the same
+                -- coordinate space SC.ResolveZoneMapFile/RefreshMapPips
+                -- render this zone at, unlike spawnPointsContinentRelative
+                -- below). A small PARTIAL sample (10 distinct locations,
+                -- deduplicated from 19 logged wood/leaf drops -- several
+                -- were the same tree chopped twice, or the same tree
+                -- logged from a slightly different standing position each
+                -- time) -- not remotely a full census like the octowow.st
+                -- data elsewhere in this file, just a real starting point.
+                -- Keep appending here as more get logged; zoneCounts["Moonwhisper
+                -- Coast"] = 33 above is a SEPARATE, unrelated figure (the
+                -- octowow.st continent-relative scrape's own count) --
+                -- don't conflate the two or overwrite one from the other.
+                ["Moonwhisper Coast"] = {
+                    {45.7,18.1}, {43.6,18.0}, {49.05,24.2}, {49.2,26.4}, {45.5,28.2},
+                    {44.3,26.9}, {46.6,24.3}, {51.6,23.8}, {53.1,22.1}, {54.6,24.5},
+                },
             },
             -- ADDED 2026-08-17 -- the 33-point Moonwhisper Coast cluster
             -- described above, now actually wired up. These are
