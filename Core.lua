@@ -67,9 +67,6 @@ local function SC_InitDB()
     if OctoSurvivalCompanionDB.faction == nil then
         OctoSurvivalCompanionDB.faction = nil -- set from UnitFactionGroup("player") or manually in the welcome screen
     end
-    if OctoSurvivalCompanionDB.showTreeBar == nil then
-        OctoSurvivalCompanionDB.showTreeBar = true
-    end
     if OctoSurvivalCompanionDB.announceNewTree == nil then
         OctoSurvivalCompanionDB.announceNewTree = true -- chat message when a new tree type is first recorded
     end
@@ -114,22 +111,26 @@ SC.IsKnown = SC_IsKnown
 -- ============================================================
 -- Tree-chop tracker
 --
--- Records how many *different* trees you've chopped, and how many times
--- each -- wood and leaves both count toward the same tree's total, since
--- both come off the same node. This only tracks tree names it has actually
--- seen you gather from -- there is no pre-made master list, since the
--- exact set of tree node names in your world isn't something this addon
--- can know in advance.
---
--- Detection is best-effort for now (see the CHAT_MSG_LOOT handler below)
--- and the hover tooltip content is a placeholder -- both are meant to be
--- tuned once we've confirmed exactly how chopping fires in game. Until
--- then, "/scw chop <tree name>" and "/scw leaf <tree name>" let you add
--- entries manually to test the bar.
+-- Records how many times you've gathered each distinct wood/leaf item.
+-- REVISED 2026-08-18: this used to be keyed by "tree name," on the
+-- assumption that CHAT_MSG_LOOT chop detection could read the specific
+-- tree's own name off your current target. REPORTED that day: it
+-- couldn't, ever -- tree nodes are GameObjects, not Units, so
+-- UnitName("target") can never legitimately resolve to the tree itself
+-- (any target present is always something else). So automatic detection
+-- (SC_TryDetectChopFromLoot below) now keys off the wood/leaf ITEM name
+-- instead (e.g. "Star Wood") -- always known with certainty straight off
+-- the loot message, no guessing. "/scw chop <name>" and "/scw leaf <name>"
+-- still take any string you want, for manual entries.
 -- ============================================================
 
--- kind is "wood" or "leaf" (defaults to "wood"); it only affects the
--- wood/leaf breakdown kept per tree, the combined total always goes up.
+-- name is typically a wood/leaf item name (e.g. "Star Wood") from
+-- automatic chop detection, or whatever string was passed to "/scw chop"/
+-- "/scw leaf" for a manual entry. kind is "wood" or "leaf" (defaults to
+-- "wood"); it only affects the wood/leaf breakdown kept per name, the
+-- combined total always goes up. Parameter still named treeName for
+-- backward compatibility with existing callers -- not literally a tree's
+-- own name (see the note above this function).
 function SC.RegisterChop(treeName, kind)
     if not treeName or treeName == "" then
         return
@@ -143,7 +144,7 @@ function SC.RegisterChop(treeName, kind)
         OctoSurvivalCompanionDB.treeDetail[treeName] = { wood = 0, leaf = 0 }
         table.insert(OctoSurvivalCompanionDB.treeOrder, treeName)
         if OctoSurvivalCompanionDB.announceNewTree then
-            SC_Print("New tree discovered: " .. treeName)
+            SC_Print("First time logging: " .. treeName)
         end
     end
     if not OctoSurvivalCompanionDB.treeDetail[treeName] then
@@ -151,9 +152,6 @@ function SC.RegisterChop(treeName, kind)
     end
     OctoSurvivalCompanionDB.treesChopped[treeName] = OctoSurvivalCompanionDB.treesChopped[treeName] + 1
     OctoSurvivalCompanionDB.treeDetail[treeName][kind] = OctoSurvivalCompanionDB.treeDetail[treeName][kind] + 1
-    if SC.RefreshTreeBar then
-        SC.RefreshTreeBar()
-    end
     if SC.RefreshLogbookPanel then
         SC.RefreshLogbookPanel()
     end
@@ -182,62 +180,13 @@ function SC.GetTotalChops()
     return total
 end
 
-function SC.GetTreeWoodCount(treeName)
-    SC_InitDB()
-    local detail = OctoSurvivalCompanionDB.treeDetail[treeName]
-    return detail and detail.wood or 0
-end
-
-function SC.GetTreeLeafCount(treeName)
-    SC_InitDB()
-    local detail = OctoSurvivalCompanionDB.treeDetail[treeName]
-    return detail and detail.leaf or 0
-end
-
--- Matches a tree name (e.g. "Simple Wood Tree (Teldrassil)") against the
--- confirmed woodTiers catalog in Data.lua and returns that tier's table
--- (tier, woodItem, leafItem, level, chopZones), or nil if it doesn't
--- match any known tier -- e.g. a manually-tested name or a genuinely new
--- one we haven't seen yet.
-function SC.GetTierForTree(treeName)
-    if not treeName or not OctoSurvivalCompanion_Data or not OctoSurvivalCompanion_Data.woodTiers then
-        return nil
-    end
-    local i
-    for i = 1, table.getn(OctoSurvivalCompanion_Data.woodTiers) do
-        local tier = OctoSurvivalCompanion_Data.woodTiers[i]
-        if tier.treeNamePattern and string.find(treeName, tier.treeNamePattern) then
-            return tier
-        end
-    end
-    return nil
-end
-
--- Combined wood+leaf chop count across every distinct tracked tree name
--- that matches this tier (e.g. "Star") -- a tier can cover more than one
--- treesChopped key if the game's own mob/object name includes a zone
--- qualifier (see the note above SC.GetTierForTree), so this can't just
--- read a single treesChopped entry directly.
-function SC.GetTierChopCount(tierKey)
-    SC_InitDB()
-    local total = 0
-    local name, count
-    for name, count in pairs(OctoSurvivalCompanionDB.treesChopped) do
-        local tier = SC.GetTierForTree(name)
-        if tier and tier.tier == tierKey then
-            total = total + count
-        end
-    end
-    return total
-end
-
 function SC.ResetTrees()
     SC_InitDB()
     OctoSurvivalCompanionDB.treesChopped = {}
     OctoSurvivalCompanionDB.treeOrder = {}
     OctoSurvivalCompanionDB.treeDetail = {}
-    if SC.RefreshTreeBar then
-        SC.RefreshTreeBar()
+    if SC.RefreshLogbookPanel then
+        SC.RefreshLogbookPanel()
     end
 end
 
@@ -317,11 +266,22 @@ local function SC_TryDetectPetFromSystemMsg(msg)
     end
 end
 
--- Experimental chop detection: when a wood or leaf item shows up in your
--- loot, assume whatever you currently have targeted (a lot of vanilla
--- gathering nodes briefly become your "target" when clicked) is the tree
--- you just chopped. This is a guess at how it'll behave, not a confirmed
--- hook -- treat it as a starting point to refine once tested live.
+-- Chop detection: when a wood or leaf item shows up in your loot, log it
+-- under that ITEM's own name (e.g. "Star Wood") -- always known with
+-- certainty straight off the loot message text itself, no guessing.
+--
+-- REMOVED 2026-08-18 the earlier "whatever's targeted is presumably the
+-- tree" guess (and the UnitCanAttack/UnitReaction filter added right
+-- after it to catch the obvious false-positive case) -- confirmed this
+-- was never salvageable: tree nodes are GameObjects, not Units, so
+-- UnitExists("target")/UnitName("target") can NEVER legitimately resolve
+-- to the tree itself. Any target present when the loot fires is always
+-- something else entirely (an incidentally-targeted NPC/creature, most
+-- often) -- there's no game-provided string this addon can read to
+-- identify which SPECIFIC tree (as opposed to which item/tier) dropped
+-- something. Octo Node Scout's manual-log feature (walk up, type a
+-- label, hit Enter) is the way to attach a real tree identity to a
+-- location, not automatic chop detection.
 local function SC_TryDetectChopFromLoot(msg)
     if not msg then
         return
@@ -344,11 +304,7 @@ local function SC_TryDetectChopFromLoot(msg)
     else
         return
     end
-    local treeName = nil
-    if UnitExists and UnitExists("target") then
-        treeName = UnitName("target")
-    end
-    SC.RegisterChop(treeName or "Unidentified Tree", kind)
+    SC.RegisterChop(itemName, kind)
 end
 
 local scFrame = CreateFrame("Frame", "OctoSurvivalCompanionEventFrame")

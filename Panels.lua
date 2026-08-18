@@ -407,7 +407,7 @@ function SC.RefreshLogbookPanel()
 
     if totalChops == 0 then
         table.insert(lines, " ")
-        table.insert(lines, "Nothing logged yet -- go chop something. Wood and leaves both count, and a tree gets logged here the moment you gather from it.")
+        table.insert(lines, "Nothing logged yet -- go chop something. Wood and leaves both count, and an item gets logged here the moment you gather it.")
         local full = ""
         local i
         for i = 1, table.getn(lines) do
@@ -422,11 +422,13 @@ function SC.RefreshLogbookPanel()
     end
 
     table.insert(lines, " ")
-    table.insert(lines, ColorText("Total Trees Chopped: " .. totalChops, 0.6, 0.8, 1) .. "   " .. ColorText("Distinct trees logged: " .. table.getn(treeOrder), 0.6, 0.8, 1))
+    table.insert(lines, ColorText("Total Trees Chopped: " .. totalChops, 0.6, 0.8, 1) .. "   " .. ColorText("Distinct items logged: " .. table.getn(treeOrder), 0.6, 0.8, 1))
 
-    -- By tier: wood/leaf totals across every zone-instance of that tier
-    -- you've chopped -- e.g. every "Simple Wood Tree (<Zone>)" you've hit
-    -- gets folded into one Simple Wood line here.
+    -- By tier: wood/leaf totals per tier, looked up directly by that
+    -- tier's own known item name(s) (tier.woodItem.name/leafItem.name) --
+    -- REVISED 2026-08-18, see the note above SC.RegisterChop in Core.lua
+    -- for why this is no longer a treeNamePattern match against a
+    -- (never actually obtainable) zone-qualified tree name.
     table.insert(lines, " ")
     table.insert(lines, ColorText("By tier", 1, 0.82, 0))
     if OctoSurvivalCompanion_Data and OctoSurvivalCompanion_Data.woodTiers then
@@ -435,21 +437,13 @@ function SC.RefreshLogbookPanel()
             local tier = OctoSurvivalCompanion_Data.woodTiers[t]
             local woodTotal = 0
             local leafTotal = 0
-            local instanceCount = 0
-            local i
-            for i = 1, table.getn(treeOrder) do
-                local treeName = treeOrder[i]
-                if tier.treeNamePattern and string.find(treeName, tier.treeNamePattern) then
-                    instanceCount = instanceCount + 1
-                    if SC.GetTreeWoodCount then
-                        woodTotal = woodTotal + SC.GetTreeWoodCount(treeName)
-                    end
-                    if SC.GetTreeLeafCount then
-                        leafTotal = leafTotal + SC.GetTreeLeafCount(treeName)
-                    end
-                end
+            if tier.woodItem and SC.GetTreeCount then
+                woodTotal = SC.GetTreeCount(tier.woodItem.name)
             end
-            if instanceCount > 0 then
+            if tier.leafItem and SC.GetTreeCount then
+                leafTotal = SC.GetTreeCount(tier.leafItem.name)
+            end
+            if woodTotal > 0 or leafTotal > 0 then
                 local woodLabel = tier.tier .. " Wood"
                 if tier.woodItem then
                     woodLabel = tier.woodItem.name
@@ -458,35 +452,25 @@ function SC.RefreshLogbookPanel()
                 if tier.leafItem then
                     leafLabel = tier.leafItem.name
                 end
-                local zoneWord = "zone"
-                if instanceCount ~= 1 then
-                    zoneWord = "zones"
-                end
-                table.insert(lines, tier.tier .. " Wood -- " .. woodLabel .. ": " .. woodTotal .. "    " .. leafLabel .. ": " .. leafTotal .. "  (logged in " .. instanceCount .. " " .. zoneWord .. ")")
+                table.insert(lines, tier.tier .. " Wood -- " .. woodLabel .. ": " .. woodTotal .. "    " .. leafLabel .. ": " .. leafTotal)
             end
         end
     end
 
-    -- By tree: exactly which named trees you've chopped, in first-seen
-    -- order (matches the tree-bar's icon order), and how many times each.
+    -- By item: each distinct wood/leaf item you've logged, in first-seen
+    -- order, and how many times each. Manually-added entries ("/scw chop
+    -- <name>"/"/scw leaf <name>") show up here too under whatever name was
+    -- typed.
     table.insert(lines, " ")
-    table.insert(lines, ColorText("By tree", 1, 0.82, 0))
+    table.insert(lines, ColorText("By item", 1, 0.82, 0))
     local i
     for i = 1, table.getn(treeOrder) do
         local treeName = treeOrder[i]
         local count = 0
-        local wood = 0
-        local leaf = 0
         if SC.GetTreeCount then
             count = SC.GetTreeCount(treeName)
         end
-        if SC.GetTreeWoodCount then
-            wood = SC.GetTreeWoodCount(treeName)
-        end
-        if SC.GetTreeLeafCount then
-            leaf = SC.GetTreeLeafCount(treeName)
-        end
-        table.insert(lines, ColorText(treeName, 0.6, 0.8, 1) .. "  -- " .. count .. " total (wood " .. wood .. ", leaf " .. leaf .. ")")
+        table.insert(lines, ColorText(treeName, 0.6, 0.8, 1) .. "  -- " .. count)
     end
 
     -- Companion pets: same known/unknown tracking as "/scw pets", laid

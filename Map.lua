@@ -11,6 +11,16 @@ OctoSurvivalCompanion = OctoSurvivalCompanion or {}
 local SC = OctoSurvivalCompanion
 
 local RARE_ZONE_THRESHOLD = 10
+-- ADDED 2026-08-18: a second, stricter cutoff -- below MIN_ZONE_LIST_COUNT
+-- a zone is dropped from the zone dropdown ENTIRELY rather than just
+-- flagged. NOT a data-quality call -- some of these counts (e.g. Balor's
+-- 3 known Bright Wood spawns) are individually re-verified as genuinely
+-- real, not spillover (see the note above woodTiers in Data.lua) -- this
+-- is purely "not worth a special trip regardless," trimming clutter from
+-- an already-long dropdown. Deliberately less than RARE_ZONE_THRESHOLD --
+-- zones between the two thresholds still show up, just flagged (see
+-- BuildZoneDropdownList).
+local MIN_ZONE_LIST_COUNT = 5
 
 -- True if zoneName has a CONFIRMED low spawn count for this tier (at or
 -- below RARE_ZONE_THRESHOLD) -- false for an unknown/unconfirmed count,
@@ -26,6 +36,20 @@ local function IsZoneRareForTier(tierData, zoneName)
         return false
     end
     return count <= RARE_ZONE_THRESHOLD
+end
+
+-- True if zoneName's confirmed count for this tier is low enough to drop
+-- from the zone dropdown entirely (below MIN_ZONE_LIST_COUNT) -- false for
+-- an unknown/unconfirmed count, same reasoning as IsZoneRareForTier.
+local function IsZoneTooRareToList(tierData, zoneName)
+    if not tierData or not tierData.zoneCounts then
+        return false
+    end
+    local count = tierData.zoneCounts[zoneName]
+    if not count then
+        return false
+    end
+    return count < MIN_ZONE_LIST_COUNT
 end
 
 -- ============================================================
@@ -629,13 +653,13 @@ function SC.RefreshMapInfoText(frame)
         frame.infoText:SetText(zoneName .. approxNote .. " grows: " .. tiersText)
     elseif tierKey then
         -- A tree tier is picked but no specific zone -- list which of
-        -- this continent's zones are actually worth farming it in (the
-        -- zone dropdown above is filtered the exact same way -- see
-        -- BuildZoneDropdownList): grows this tier AND isn't a confirmed
-        -- rare/low-count spot (IsZoneRareForTier). Rare zones still show
-        -- up if you pick them directly from "All Zones" or via a tree-bar
-        -- tooltip -- this view specifically is "where should I go to
-        -- farm this."
+        -- this continent's zones are actually worth farming it in: grows
+        -- this tier AND isn't a confirmed rare/low-count spot
+        -- (IsZoneRareForTier, threshold 10 -- stricter than the zone
+        -- dropdown's own MIN_ZONE_LIST_COUNT-based cutoff of 5, see
+        -- BuildZoneDropdownList). Rare zones between the two thresholds
+        -- still show up if you pick them directly from "All Zones" --
+        -- this view specifically is "where should I go to farm this."
         local tier = GetTierByKey(tierKey)
         local zoneNames = {}
         local growsAtAllHere = false
@@ -674,6 +698,23 @@ function SC.RefreshMapInfoText(frame)
     end
 end
 
+-- TRIED 2026-08-18, REVERTED SAME DAY: rescaling
+-- tierData.spawnPointsContinentRelative's bounding box into a synthetic
+-- zone-local 0-100 space (a NormalizeContinentRelativePoints helper that
+-- lived here) so Moonwhisper Coast's pips could plot on its real client
+-- map. Confirmed broken in-game via screenshot: Moonwhisper Coast's
+-- resolved "real map" turned out to be a WIDE composite canvas that also
+-- shows Winterspring/Hyjal, not a tight crop of just the coast -- so
+-- stretching the tiny 33-point cluster to fill the whole canvas scattered
+-- pips across Winterspring's unrelated landmass instead of clustering on
+-- the coast. Worse than no pips at all (actively misleading, not just
+-- unhelpful), so backed out -- Moonwhisper Coast is back to the honest
+-- "real map, no pip data yet" state Hyjal/Tel'abim already have. Actually
+-- fixing this needs real zone-local coordinates gathered specifically
+-- against THIS map view (in-game or a source that maps to it), not a
+-- transform of the continent-relative cluster -- that data was authored
+-- for an entirely different canvas and there's no sound way to convert it.
+--
 -- Plots one "pip" per individual spawn point Data.lua has on file for the
 -- currently picked tier over a zone's own client map (frame.zoneMapFrame)
 -- -- tierData.spawnPoints[zoneName], zone-local percent coordinates
@@ -683,12 +724,7 @@ end
 -- back to the generic defaultTreeIcon for tiers without one (Dead Wood
 -- Tree has no wood item of its own) -- ADDED 2026-08-17, replacing a flat
 -- gold WHITE8X8 dot so a pip's icon identifies which tree it is at a
--- glance, not just its color. These are the SAME custom icon paths the
--- tree-chop tracker bar tried and pulled back out (see the note above
--- CreateTreeBar) after showing up blank in game for a cause that was
--- never pinned down -- worth revisiting this if pips come up blank too,
--- since that'd point at the icon paths themselves rather than anything
--- about how the tracker bar specifically drew them.
+-- glance, not just its color.
 --
 -- Pips are pooled per continent frame (frame.mapPips) and reused/hidden
 -- rather than recreated, same pattern as the recipe rows elsewhere in
@@ -697,10 +733,9 @@ end
 -- itself is re-set on every refresh (cheap, and needed since the same
 -- pooled pip frames get reused across different tiers).
 --
--- Deliberately only wired up for the real-zone-map view. The zoomed-crop
--- fallback (custom Turtle WoW zones) uses a different, continent-relative
--- coordinate space that these zone-local points don't line up with -- see
--- the Moonwhisper Coast note in Data.lua.
+-- Deliberately only reads tierData.spawnPoints (zone-local coordinates)
+-- -- NOT spawnPointsContinentRelative, see the REVERTED note above this
+-- function for why that fallback doesn't work for Moonwhisper Coast.
 local function RefreshMapPips(frame)
     if frame.mapPips then
         local i
@@ -887,18 +922,21 @@ function SC.UpdateMapView(frame)
     -- Highlands, Gilneas) straight to the zoomed continent-crop view below,
     -- reasoning that a real client map's zone-local coordinate space has no
     -- known mapping to our octowow.st-scraped CONTINENT-relative pip data
-    -- (tierData.spawnPointsContinentRelative) for these zones. That's still
-    -- true, BUT it turned out to be the wrong tradeoff in practice:
-    -- Moonwhisper Coast's real map (SC.ResolveZoneMapFile below DOES
-    -- resolve one for it -- CONFIRMED in-game, a legitimate zone map, not a
-    -- bug) was rendering correctly all along, just without pips -- exactly
-    -- like Hyjal/Tel'abim's already-accepted "real map, no pip data yet"
-    -- gap (see the README's "About the data" section). Forcing zoom-crop
-    -- traded a working map with no pips for a completely black one, since
-    -- CreateZoomCrop's ScrollFrame-based rendering has its own separate,
-    -- still-unresolved bug (never root-caused -- temporary debug prints
-    -- added while chasing it were removed again once this revert made
-    -- them unnecessary). So:
+    -- (tierData.spawnPointsContinentRelative) for these zones. That turned
+    -- out to be the wrong tradeoff in practice: Moonwhisper Coast's real
+    -- map (SC.ResolveZoneMapFile below DOES resolve one for it -- CONFIRMED
+    -- in-game, a legitimate zone map, not a bug) was rendering correctly
+    -- all along, just without pips -- exactly like Hyjal/Tel'abim's
+    -- already-accepted "real map, no pip data yet" gap (see the README's
+    -- "About the data" section). Forcing zoom-crop traded a working map
+    -- with no pips for a completely black one, since CreateZoomCrop's
+    -- ScrollFrame-based rendering has its own separate, still-unresolved
+    -- bug (never root-caused -- temporary debug prints added while chasing
+    -- it were removed again once this revert made them unnecessary). So:
+    -- (TRIED 2026-08-18: an approximate continent-relative-to-zone-local
+    -- mapping for Moonwhisper Coast's pips -- REVERTED same day, see the
+    -- note above RefreshMapPips in this file. Moonwhisper Coast's "no pip
+    -- data yet" gap stands, same as Hyjal/Tel'abim.)
     -- trust SC.ResolveZoneMapFile again for every zone, same as any other
     -- zone -- zoom-crop is still the fallback for whatever zone it
     -- genuinely can't resolve (mapFileName nil), same as originally
@@ -1042,17 +1080,21 @@ end
 -- continent that grows the currently selected tree tier (if any).
 --
 -- 2026-08-16: a confirmed rare/low-count zone for that tier
--- (IsZoneRareForTier, e.g. Balor's 3 known Bright Wood spawns) used to be
--- left out of this list entirely. It's shown again now, but flagged --
--- its count gets ", might be spillover" tacked on (e.g. "Darkshore (2,
--- might be spillover)") instead of disappearing, so you can still see and
--- pick it, just with a clear heads-up that a count this low might be a
--- database boundary artifact rather than its own real population. (Some
--- of these specific low counts were individually re-verified as genuine
+-- (IsZoneRareForTier, e.g. Un'Goro Crater's 5 known Dead Wood spawns) used
+-- to be left out of this list entirely, then shown again but flagged
+-- instead (", might be spillover" tacked onto its count) so you could
+-- still see and pick it. 2026-08-18: split back into two tiers -- a zone
+-- with a confirmed count below MIN_ZONE_LIST_COUNT (IsZoneTooRareToList,
+-- e.g. Balor's 3 known Bright Wood spawns) is dropped from the list
+-- entirely again, trimming clutter for counts this low; anything between
+-- MIN_ZONE_LIST_COUNT and RARE_ZONE_THRESHOLD still shows, just flagged.
+-- (Some specific low counts were individually re-verified as genuine
 -- rather than spillover -- see the note above woodTiers in Data.lua --
 -- but that confirmation doesn't apply to every low count on file, so the
 -- caveat stays generic here rather than claiming more than is known
--- zone-by-zone.)
+-- zone-by-zone. Either way, below MIN_ZONE_LIST_COUNT it's dropped
+-- regardless of whether it's spillover or confirmed-real -- see the note
+-- above MIN_ZONE_LIST_COUNT.)
 local function BuildZoneDropdownList(frame)
     local info = {}
     info.text = "All Zones"
@@ -1096,6 +1138,11 @@ local function BuildZoneDropdownList(frame)
                         end
                     end
                 end
+                if include and tierData and IsZoneTooRareToList(tierData, zone.name) then
+                    -- Dropped entirely rather than listed-and-flagged --
+                    -- see the note above this function.
+                    include = false
+                end
                 if include then
                     local zoneName = zone.name
                     -- Known spawn count for the selected tier, shown right
@@ -1108,8 +1155,10 @@ local function BuildZoneDropdownList(frame)
                     -- the note above woodTiers in Data.lua -- unknown
                     -- isn't the same claim as zero). A confirmed rare/
                     -- low-count zone (IsZoneRareForTier) gets ", might be
-                    -- spillover" tacked on instead, e.g. "(2, might be
+                    -- spillover" tacked on instead, e.g. "(5, might be
                     -- spillover)" -- see the note above this function.
+                    -- (Counts below MIN_ZONE_LIST_COUNT never reach here at
+                    -- all -- excluded above.)
                     local countMarkup = ""
                     if tierData and tierData.zoneCounts and tierData.zoneCounts[zoneName] then
                         local count = tierData.zoneCounts[zoneName]

@@ -31,24 +31,17 @@ yourself.
   no reveal artwork on file for either one client-side, not a bug in this
   addon, and the fogged look actually reads better for them anyway — see
   the note above `RefreshMapOverlay` in `Map.lua`.
-- **Honest about sparse zones, without hiding them** — a handful of zones
-  have confirmed-low spawn counts for a given tier (e.g. only 3 known
-  Bright Wood spawns in Balor). Nothing gets deleted or hidden from the
-  zone dropdown for being sparse — its count just gets a
-  "(N, might be spillover)" flag instead of a plain "(N)", so you can see
-  and pick it with a clear heads-up. The "go farm this" recommendation
-  surfaces (tree-bar tooltip, click-to-jump) are stricter, though: those
-  automatically skip flagged zones and fall back to the full list only if
-  a tier has no confirmed-good zone at all.
-- **Tree-chop tracker bar** — a persistent bar showing a running "Total
-  Trees Chopped" count, plus a second row listing all 6 wood tiers in a
-  fixed order (Simple/Bright/Shade/Tropical/Star/Dead) with each tier's
-  own chop count. Rebuilt from scratch 2026-08-17 (see the note above
-  `CreateTreeBar` in `UI.lua`) after two earlier per-tree display attempts
-  (icons, then colored text) came up visually broken in game for reasons
-  that never reproduced from the code or data alone — hover details and
-  click-to-jump-to-map aren't back yet, added deliberately one step at a
-  time on top of this simpler text-only version.
+- **Honest about sparse zones, without drowning in them** — a zone with a
+  confirmed spawn count of 5–10 for a given tier (e.g. Un'Goro Crater's 5
+  known Dead Wood spawns) still shows in the zone dropdown, just with a
+  "(N, might be spillover)" flag instead of a plain "(N)" (see
+  `IsZoneRareForTier` in `Map.lua`), so you can see and pick it with a
+  clear heads-up. Below that — under 5 confirmed spawns (e.g. Balor's 3
+  known Bright Wood spawns) — the zone is left off the dropdown entirely
+  (`IsZoneTooRareToList`/`MIN_ZONE_LIST_COUNT`). This isn't a data-quality
+  call — some of these specific counts are individually re-verified as
+  genuinely real, not spillover — it's just "not worth a special trip
+  either way," trimming clutter from an already-long list.
 - **Logbook tab** — "every log you've logged, logged." Your full personal
   chop history: totals, a by-tier summary, a by-tree breakdown, and a
   companion-pet known/unknown summary. Nothing is pre-populated — it only

@@ -1231,9 +1231,8 @@ OctoSurvivalCompanion_Data = {
             -- so its object page falls back to plotting those 33 points on
             -- the bare KALIMDOR CONTINENT map instead, in continent-relative
             -- percent coordinates -- a different coordinate space than the
-            -- zone-local points below, which would need translating through
-            -- the Map tab's zoomed-crop math (see CreateZoomCrop in Map.lua)
-            -- rather than just being dropped in as-is. Left for a follow-up.
+            -- zone-local points below. See spawnPointsContinentRelative
+            -- below for why this can't just be converted and dropped in.
             spawnPoints = {
                 Winterspring = {
                     {14.4,72.66}, {15.6,69.56}, {16.46,74.8}, {16.58,73.08}, {17.03,69.77}, {21.09,67.68}, {23.3,84.05}, {24.22,86.29},
@@ -1299,14 +1298,35 @@ OctoSurvivalCompanion_Data = {
             -- whole Kalimdor map), not zone-local like spawnPoints above --
             -- octowow.st's object page plots them on the bare continent
             -- map since it doesn't recognize this custom Turtle WoW zone,
-            -- so that's the coordinate space they were authored in.
-            -- Rendered by Map.lua's zoomed-crop fallback view (the one
-            -- custom Turtle WoW zones get instead of a real client map),
-            -- which is itself just a scaled/panned view of that same
-            -- continent art -- see RefreshZoomCropPips in Map.lua. Safe to
-            -- attribute the whole cluster to Moonwhisper Coast specifically
-            -- (not split across multiple custom zones) because it's the
-            -- ONLY custom Kalimdor zone that carries Star Wood.
+            -- so that's the coordinate space they were authored in. Safe
+            -- to attribute the whole cluster to Moonwhisper Coast
+            -- specifically (not split across multiple custom zones)
+            -- because it's the ONLY custom Kalimdor zone that carries
+            -- Star Wood.
+            --
+            -- Moonwhisper Coast is unusual among the custom Turtle WoW
+            -- zones in that it DOES resolve a real client map (see
+            -- SC.UpdateMapView's forceZoomCrop-revert note in Map.lua), so
+            -- it's shown there rather than on the zoomed-crop continent
+            -- view these coordinates were originally authored for -- and
+            -- RefreshMapPips (the real-map pip renderer) deliberately does
+            -- NOT read this field, only tierData.spawnPoints. TRIED
+            -- 2026-08-18: rescaling this cluster's bounding box into a
+            -- synthetic zone-local space so it could plot on the real map
+            -- anyway -- REVERTED SAME DAY once a screenshot showed
+            -- Moonwhisper Coast's resolved map is actually a WIDE
+            -- composite canvas that also shows Winterspring/Hyjal, not a
+            -- tight crop of just the coast, so the stretched points landed
+            -- all over Winterspring's unrelated landmass instead of
+            -- clustering on the coast (see the note above RefreshMapPips
+            -- in Map.lua). This field is genuinely orphaned right now --
+            -- RefreshZoomCropPips would use it for a zone on the
+            -- zoomed-crop view, but Moonwhisper Coast isn't one, and no
+            -- other custom zone has continent-relative data on file.
+            -- Fixing this for real needs zone-local coordinates gathered
+            -- specifically against Moonwhisper Coast's actual resolved map
+            -- (in-game or a source that maps to it), not a transform of
+            -- this dataset.
             spawnPointsContinentRelative = {
                 ["Moonwhisper Coast"] = {
                     {58.16,14.43}, {58.2,15.42}, {58.57,15.17}, {58.9,14.52}, {58.92,16.37}, {59.24,14.92}, {59.35,14.43}, {59.5,16.33},

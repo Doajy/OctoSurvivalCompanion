@@ -1,8 +1,8 @@
 --[[
 Octo Survival Companion - UI.lua
-The main window's shell: the frame itself, tab switching, the bottom
-tree-chop tracker bar, the minimap button, and the first-run welcome/setup
-screen. Tab CONTENT lives elsewhere -- Recipes/Gardening/Trainers/Logbook/
+The main window's shell: the frame itself, tab switching, the minimap
+button, and the first-run welcome/setup screen. Tab CONTENT lives
+elsewhere -- Recipes/Gardening/Trainers/Logbook/
 Guide in Panels.lua, the Map tab in Map.lua -- this file just builds the
 window around them and wires the tabs together (SC.CreateMapPanel and
 friends, exposed by those two files, are called from BuildUI below).
@@ -64,7 +64,12 @@ SC.JoinList = JoinList
 local function CreateMainFrame()
     local f = CreateFrame("Frame", "OctoSurvivalCompanionFrame", UIParent)
     f:SetWidth(790)
-    f:SetHeight(834)
+    -- 760, down from 834 -- shrunk 2026-08-18 after removing the bottom
+    -- tree-chop tracker bar (that data now lives solely in the Logbook
+    -- tab). Panel bottom sits at 86 (top offset) + 654 (PANEL_HEIGHT) =
+    -- 740 from the frame's top, so 760 leaves a plain 20px margin below it
+    -- instead of the ~94px the bar used to occupy.
+    f:SetHeight(760)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     f:SetFrameStrata("DIALOG")
     f:SetMovable(true)
@@ -116,107 +121,6 @@ local function CreatePanel(parent)
     return p
 end
 -- ============================================================
--- Bottom bar: tree-chop tracker
---
--- STRIPPED TO BARE MINIMUM 2026-08-17 -- just the background bar and a
--- "Total Trees Chopped: N" counter, nothing per-tree. Two rewrites in a
--- row (icon textures, then colored text entries) both left the bar
--- visually broken in game for reasons that never reproduced from the code
--- or data in isolation, so this drops the per-tree row entirely rather
--- than debug a fourth variant blind.
---
--- Second row ADDED 2026-08-17 -- plain text, one entry per wood TIER (not
--- per distinct tree name like the old removed version) in the fixed order
--- Data.lua's woodTiers table lists them (Simple/Bright/Shade/Tropical/
--- Star/Dead), each showing SC.GetTierChopCount(tier.tier) -- deliberately
--- no hover tooltip and no click-to-jump yet, kept back until this simpler
--- text-only version is confirmed rendering fine in game.
--- ============================================================
-
-local TIER_ENTRY_HEIGHT = 16
-local TIER_ENTRY_GAP = 10
-
-local treeBarFrame
-local treeBarTierLabels = {}
-
-local function CreateTreeBar(parent)
-    local bar = CreateFrame("Frame", "OctoSurvivalCompanionTreeBar", parent)
-    bar:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 20, 14)
-    bar:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -20, 14)
-    bar:SetHeight(44)
-    bar:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 12,
-        insets = { left = 3, right = 3, top = 3, bottom = 3 },
-    })
-    bar:SetBackdropColor(0, 0, 0, 0.35)
-
-    local label = bar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    label:SetPoint("TOPLEFT", bar, "TOPLEFT", 8, -6)
-    label:SetJustifyH("LEFT")
-    label:SetText("Total Trees Chopped: 0")
-    bar.label = label
-
-    local tierHolder = CreateFrame("Frame", nil, bar)
-    tierHolder:SetPoint("TOPLEFT", bar, "TOPLEFT", 8, -24)
-    tierHolder:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -8, 4)
-    bar.tierHolder = tierHolder
-
-    treeBarFrame = bar
-    return bar
-end
-
-function SC.RefreshTreeBar()
-    if not treeBarFrame then
-        return
-    end
-    if OctoSurvivalCompanionDB and OctoSurvivalCompanionDB.showTreeBar == false then
-        treeBarFrame:Hide()
-        return
-    end
-    treeBarFrame:Show()
-    local totalChops = 0
-    if SC.GetTotalChops then
-        totalChops = SC.GetTotalChops()
-    end
-    treeBarFrame.label:SetText("Total Trees Chopped: " .. totalChops)
-
-    if not OctoSurvivalCompanion_Data or not OctoSurvivalCompanion_Data.woodTiers then
-        return
-    end
-
-    local xCursor = 0
-    local i
-    for i = 1, table.getn(OctoSurvivalCompanion_Data.woodTiers) do
-        local tier = OctoSurvivalCompanion_Data.woodTiers[i]
-        local fs = treeBarTierLabels[i]
-        if not fs then
-            fs = treeBarFrame.tierHolder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            fs:SetHeight(TIER_ENTRY_HEIGHT)
-            fs:SetJustifyH("LEFT")
-            treeBarTierLabels[i] = fs
-        end
-
-        local count = 0
-        if SC.GetTierChopCount then
-            count = SC.GetTierChopCount(tier.tier)
-        end
-        fs:SetText(tier.tier .. " (" .. count .. ")")
-        fs:ClearAllPoints()
-        fs:SetPoint("TOPLEFT", treeBarFrame.tierHolder, "TOPLEFT", xCursor, 0)
-        xCursor = xCursor + fs:GetStringWidth() + TIER_ENTRY_GAP
-        fs:Show()
-    end
-
-    local j
-    for j = table.getn(OctoSurvivalCompanion_Data.woodTiers) + 1, table.getn(treeBarTierLabels) do
-        if treeBarTierLabels[j] then
-            treeBarTierLabels[j]:Hide()
-        end
-    end
-end
--- ============================================================
 -- Tab switching / init
 -- ============================================================
 
@@ -257,11 +161,9 @@ local function BuildUI()
     SC.CreateTrainersPanel(panels[2])
     SC.CreateLogbookPanel(panels[3])
     SC.CreateGuidePanel(panels[4])
-    CreateTreeBar(mainFrame)
 
     SC.ShowTab(1)
     SC.RefreshUI()
-    SC.RefreshTreeBar()
 end
 
 function SC.ToggleFrame()
@@ -272,7 +174,6 @@ function SC.ToggleFrame()
         mainFrame:Hide()
     else
         SC.RefreshUI()
-        SC.RefreshTreeBar()
         mainFrame:Show()
     end
 end
@@ -326,20 +227,39 @@ function SC.CreateMinimapButton()
     icon:SetWidth(20)
     icon:SetHeight(20)
     icon:SetPoint("TOPLEFT", btn, "TOPLEFT", 7, -6)
-    -- INV_Campfire -- a standard vanilla icon (used for the "Basic
-    -- Campfire" spell/item since early Classic, confirmed via web search
-    -- 2026-08-17, not a Turtle WoW custom texture), chosen because it's
-    -- reportedly the same icon Turtle WoW's own Survival skill shows in
-    -- the spellbook's General tab -- thematically right (survival/
-    -- wilderness) and guaranteed to actually exist, unlike guessing at an
-    -- unconfirmed custom icon filename would be.
-    icon:SetTexture("Interface\\Icons\\INV_Campfire")
+    -- REVERTED 2026-08-17 -- tried "INV_Campfire" (blank in-game, likely a
+    -- later-Classic-only icon) and then Data.lua's defaultTreeIcon
+    -- ("INV_Misc_Log_02", also blank) -- both were unverified guesses at
+    -- STOCK Blizzard icon names. defaultTreeIcon turned out to never
+    -- actually be exercised elsewhere in the addon either (every wood tier
+    -- defines its own icon, so that fallback path never renders), so it
+    -- was never really "confirmed working" to begin with. Switched to
+    -- "simple_wood_1" instead -- one of the server's own CUSTOM item icons
+    -- (Data.lua woodTiers["Simple"].woodItem.icon), the same one already
+    -- rendering fine as a map pip, so it's the one icon path in this whole
+    -- investigation with real in-game confirmation behind it.
+    icon:SetTexture("Interface\\Icons\\simple_wood_1")
+    -- Item icons are square art on a square canvas -- the circular
+    -- MiniMap-TrackingBorder ring only masks a thin band, so the icon's
+    -- own square corners poked out past it as a visible black box.
+    -- Standard fix (same crop LibDBIcon-style minimap buttons use):
+    -- zoom the texture coords in ~7% per edge so the corners are cropped
+    -- away before they'd reach past the ring.
+    icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
     local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetWidth(31)
     highlight:SetHeight(31)
     highlight:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, 0)
     highlight:SetTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+    -- ADDED 2026-08-18 -- this is a glow-style asset (black background,
+    -- white glow shape) meant for ADDITIVE blending, where black
+    -- contributes nothing and only the glow adds light. Without this, the
+    -- texture uses the default alpha-blend mode instead, which reads the
+    -- black background as opaque black rather than transparent -- since
+    -- HIGHLIGHT draws on top of everything else, that painted the icon
+    -- over solid black on hover instead of glowing.
+    highlight:SetBlendMode("ADD")
 
     btn:SetScript("OnDragStart", function()
         this:SetScript("OnUpdate", function()
@@ -431,10 +351,12 @@ end
 local function CreateWelcomeFrame()
     local f = CreateFrame("Frame", "OctoSurvivalCompanionWelcomeFrame", UIParent)
     f:SetWidth(420)
-    -- 380, down from 470 -- shrunk 2026-08-17 after removing 2 of the 4
-    -- option checkboxes (hidePetNames, useTomTom -- see the note above
-    -- them below) left a big empty gap above the Save button otherwise.
-    f:SetHeight(380)
+    -- 330, down from 470 -- shrunk 2026-08-17 after removing 2 of the 4
+    -- option checkboxes (hidePetNames, useTomTom), then again 2026-08-18
+    -- after removing showTreeBar too, down to a single remaining
+    -- checkbox -- each removal otherwise left a bigger empty gap above
+    -- the Save button.
+    f:SetHeight(330)
     f:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
     f:SetFrameStrata("FULLSCREEN_DIALOG")
     f:SetMovable(true)
@@ -469,9 +391,6 @@ local function CreateWelcomeFrame()
         -- reads those settings once at build time -- same as Save does.
         OctoSurvivalCompanionDB.setupComplete = true
         welcomeFrame:Hide()
-        if SC.RefreshTreeBar then
-            SC.RefreshTreeBar()
-        end
         if SC.RefreshTrainersPanel then
             SC.RefreshTrainersPanel()
         end
@@ -523,21 +442,19 @@ local function CreateWelcomeFrame()
     optionsLabel:SetPoint("TOPLEFT", hordeBtn, "BOTTOMLEFT", -20, -18)
     optionsLabel:SetText("Options:")
 
-    -- Generously spaced (46px) since these labels wrap to 2 lines at this
-    -- width. REMOVED 2026-08-17: hidePetNames and useTomTom checkboxes --
-    -- both settings were fully plumbed into the DB but never actually
-    -- consumed anywhere (hidePetNames had no reader at all; useTomTom's
-    -- only reader lived inside SC.JumpToTreeOnMap, removed the same day as
-    -- dead code -- see the note above CreateContinentMap in Map.lua). A
-    -- checkbox that does nothing is worse than no checkbox -- re-add
-    -- properly if/when either feature actually gets built.
-    local check1 = CreateWelcomeCheckbox(f, "showTreeBar",
-        "Show the tree-chop tracker bar at the bottom of the window",
-        -256)
-    local check2 = CreateWelcomeCheckbox(f, "announceNewTree",
+    -- REMOVED 2026-08-17: hidePetNames and useTomTom checkboxes -- both
+    -- settings were fully plumbed into the DB but never actually consumed
+    -- anywhere (hidePetNames had no reader at all; useTomTom's only reader
+    -- lived inside SC.JumpToTreeOnMap, removed the same day as dead code --
+    -- see the note above CreateContinentMap in Map.lua). REMOVED
+    -- 2026-08-18: showTreeBar checkbox, along with the bottom tree-chop
+    -- tracker bar it toggled -- that data lives solely in the Logbook tab
+    -- now. A checkbox that does nothing is worse than no checkbox --
+    -- re-add properly if/when a removed feature actually comes back.
+    local check1 = CreateWelcomeCheckbox(f, "announceNewTree",
         "Print a chat message when a new tree type is first recorded",
-        -302)
-    f.checkboxes = { check1, check2 }
+        -256)
+    f.checkboxes = { check1 }
 
     local saveBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     saveBtn:SetWidth(140)
@@ -547,9 +464,6 @@ local function CreateWelcomeFrame()
     saveBtn:SetScript("OnClick", function()
         OctoSurvivalCompanionDB.setupComplete = true
         welcomeFrame:Hide()
-        if SC.RefreshTreeBar then
-            SC.RefreshTreeBar()
-        end
         if SC.RefreshTrainersPanel then
             SC.RefreshTrainersPanel()
         end
@@ -585,7 +499,7 @@ local function RefreshWelcomeFrame()
         end
     end
 
-    local defaults = { showTreeBar = true, announceNewTree = true }
+    local defaults = { announceNewTree = true }
     local dbKey
     for i = 1, table.getn(welcomeFrame.checkboxes) do
         local check = welcomeFrame.checkboxes[i]
