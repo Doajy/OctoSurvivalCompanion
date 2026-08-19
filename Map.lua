@@ -11,16 +11,13 @@ OctoSurvivalCompanion = OctoSurvivalCompanion or {}
 local SC = OctoSurvivalCompanion
 
 local RARE_ZONE_THRESHOLD = 10
--- ADDED 2026-08-18: a second, stricter cutoff -- below MIN_ZONE_LIST_COUNT
--- a zone is dropped from the zone dropdown ENTIRELY rather than just
--- flagged. NOT a data-quality call -- some of these counts (e.g. Balor's
--- 3 known Bright Wood spawns) are individually re-verified as genuinely
--- real, not spillover (see the note above woodTiers in Data.lua) -- this
--- is purely "not worth a special trip regardless," trimming clutter from
--- an already-long dropdown. Deliberately less than RARE_ZONE_THRESHOLD --
--- zones between the two thresholds still show up, just flagged (see
--- BuildZoneDropdownList).
-local MIN_ZONE_LIST_COUNT = 5
+
+-- REMOVED 2026-08-19 the MIN_ZONE_LIST_COUNT/IsZoneTooRareToList pair that
+-- used to drop a zone from the dropdown entirely below a count of 5. Every
+-- zone that grows the selected tier now shows, confirmed-rare ones included
+-- -- see BuildZoneDropdownList's own note for the reintegration and the
+-- rare-icon treatment that replaced dropping them.
+
 
 -- True if zoneName has a CONFIRMED low spawn count for this tier (at or
 -- below RARE_ZONE_THRESHOLD) -- false for an unknown/unconfirmed count,
@@ -36,20 +33,6 @@ local function IsZoneRareForTier(tierData, zoneName)
         return false
     end
     return count <= RARE_ZONE_THRESHOLD
-end
-
--- True if zoneName's confirmed count for this tier is low enough to drop
--- from the zone dropdown entirely (below MIN_ZONE_LIST_COUNT) -- false for
--- an unknown/unconfirmed count, same reasoning as IsZoneRareForTier.
-local function IsZoneTooRareToList(tierData, zoneName)
-    if not tierData or not tierData.zoneCounts then
-        return false
-    end
-    local count = tierData.zoneCounts[zoneName]
-    if not count then
-        return false
-    end
-    return count < MIN_ZONE_LIST_COUNT
 end
 
 -- ============================================================
@@ -652,16 +635,19 @@ function SC.RefreshMapInfoText(frame)
         end
         frame.infoText:SetText(zoneName .. approxNote .. " grows: " .. tiersText)
     elseif tierKey then
-        -- A tree tier is picked but no specific zone -- list which of
-        -- this continent's zones are actually worth farming it in: grows
-        -- this tier AND isn't a confirmed rare/low-count spot
-        -- (IsZoneRareForTier, threshold 10 -- stricter than the zone
-        -- dropdown's own MIN_ZONE_LIST_COUNT-based cutoff of 5, see
-        -- BuildZoneDropdownList). Rare zones between the two thresholds
-        -- still show up if you pick them directly from "All Zones" --
-        -- this view specifically is "where should I go to farm this."
+        -- A tree tier is picked but no specific zone -- list every zone on
+        -- this continent that grows it, solid zones first, then confirmed
+        -- rare/low-count ones (IsZoneRareForTier, threshold 10) appended at
+        -- the end, each amended with its count and a "(rare)" tag right on
+        -- that zone's own name -- ADDED 2026-08-19, replacing an earlier
+        -- attempt that split solid vs. rare into two separate lines (kept
+        -- the list unified per feedback: one list, low-count zones just
+        -- ordered last and annotated inline instead of called out
+        -- separately). A single trailing note explains what "(rare)" means
+        -- once, rather than repeating the full explanation per zone.
         local tier = GetTierByKey(tierKey)
         local zoneNames = {}
+        local rareZoneNames = {}
         local growsAtAllHere = false
         if OctoSurvivalCompanion_Data and OctoSurvivalCompanion_Data.zones then
             local i
@@ -672,7 +658,14 @@ function SC.RefreshMapInfoText(frame)
                     for j = 1, table.getn(z.tiers) do
                         if z.tiers[j] == tierKey then
                             growsAtAllHere = true
-                            if not IsZoneRareForTier(tier, z.name) then
+                            if IsZoneRareForTier(tier, z.name) then
+                                local count = tier and tier.zoneCounts and tier.zoneCounts[z.name]
+                                if count then
+                                    table.insert(rareZoneNames, z.name .. " (" .. count .. ", rare)")
+                                else
+                                    table.insert(rareZoneNames, z.name .. " (rare)")
+                                end
+                            else
                                 table.insert(zoneNames, z.name)
                             end
                         end
@@ -684,14 +677,26 @@ function SC.RefreshMapInfoText(frame)
         if tier and tier.level then
             skillText = tier.level
         end
-        if table.getn(zoneNames) == 0 then
+        local allZoneNames = {}
+        local i
+        for i = 1, table.getn(zoneNames) do
+            table.insert(allZoneNames, zoneNames[i])
+        end
+        for i = 1, table.getn(rareZoneNames) do
+            table.insert(allZoneNames, rareZoneNames[i])
+        end
+        if table.getn(allZoneNames) == 0 then
             if growsAtAllHere then
                 frame.infoText:SetText(tierKey .. " Wood only grows here in small/rare amounts -- pick \"All Zones\" and a specific zone to see them.")
             else
                 frame.infoText:SetText(tierKey .. " Wood doesn't grow on this continent -- try the other one.")
             end
         else
-            frame.infoText:SetText(tierKey .. " Wood (skill " .. skillText .. "): " .. SC.JoinList(zoneNames))
+            local rareNote = ""
+            if table.getn(rareZoneNames) > 0 then
+                rareNote = " |cff888888(\"rare\" = confirmed low count -- possible boundary-spillover data, or a genuinely rare spawn that may need more Survival skill than this zone otherwise calls for)|r"
+            end
+            frame.infoText:SetText(tierKey .. " Wood (skill " .. skillText .. "): " .. SC.JoinList(allZoneNames) .. rareNote)
         end
     else
         frame.infoText:SetText("Pick a tree and/or a zone above to see chop details.")
@@ -1089,18 +1094,22 @@ end
 -- (IsZoneRareForTier, e.g. Un'Goro Crater's 5 known Dead Wood spawns) used
 -- to be left out of this list entirely, then shown again but flagged
 -- instead (", might be spillover" tacked onto its count) so you could
--- still see and pick it. 2026-08-18: split back into two tiers -- a zone
--- with a confirmed count below MIN_ZONE_LIST_COUNT (IsZoneTooRareToList,
--- e.g. Balor's 3 known Bright Wood spawns) is dropped from the list
--- entirely again, trimming clutter for counts this low; anything between
--- MIN_ZONE_LIST_COUNT and RARE_ZONE_THRESHOLD still shows, just flagged.
--- (Some specific low counts were individually re-verified as genuine
--- rather than spillover -- see the note above woodTiers in Data.lua --
--- but that confirmation doesn't apply to every low count on file, so the
--- caveat stays generic here rather than claiming more than is known
--- zone-by-zone. Either way, below MIN_ZONE_LIST_COUNT it's dropped
--- regardless of whether it's spillover or confirmed-real -- see the note
--- above MIN_ZONE_LIST_COUNT.)
+-- still see and pick it. 2026-08-18: a second, stricter cutoff
+-- (MIN_ZONE_LIST_COUNT/IsZoneTooRareToList) dropped anything below a count
+-- of 5 from the list again regardless.
+--
+-- REINTEGRATED 2026-08-19: that second cutoff is gone -- every zone that
+-- grows the selected tier shows now, no matter how low its confirmed
+-- count, so the dropdown always shows all known trees for that tier in
+-- that zone rather than silently hiding some.
+--
+-- Same day, tried flagging a confirmed-rare zone (IsZoneRareForTier) with
+-- a distinct icon plus the ", might be spillover" text -- reverted right
+-- back out after actually seeing it in game (looked bad). Every zone now
+-- gets the exact same plain "(N)" and the same tier icon regardless of how
+-- low its count is -- IsZoneRareForTier is still there and still used
+-- elsewhere (SC.RefreshMapInfoText's "where to farm" filtering), it's just
+-- not visually called out in THIS list anymore.
 local function BuildZoneDropdownList(frame)
     local info = {}
     info.text = "All Zones"
@@ -1144,35 +1153,28 @@ local function BuildZoneDropdownList(frame)
                         end
                     end
                 end
-                if include and tierData and IsZoneTooRareToList(tierData, zone.name) then
-                    -- Dropped entirely rather than listed-and-flagged --
-                    -- see the note above this function.
-                    include = false
-                end
                 if include then
                     local zoneName = zone.name
                     -- Known spawn count for the selected tier, shown right
-                    -- after the zone name (e.g. "Winterspring (14)", with
-                    -- the tier's icon rendered separately via info.icon
-                    -- above -- Blizzard's dropdown template draws that to
-                    -- the right of the whole text string) -- left off for
-                    -- "All Zones" (no single tier to count)
+                    -- after the zone name (e.g. "Winterspring (14)"), and
+                    -- left off for "All Zones" (no single tier to count)
                     -- and for zones with no confirmed count on file (see
                     -- the note above woodTiers in Data.lua -- unknown
-                    -- isn't the same claim as zero). A confirmed rare/
-                    -- low-count zone (IsZoneRareForTier) gets ", might be
-                    -- spillover" tacked on instead, e.g. "(5, might be
-                    -- spillover)" -- see the note above this function.
-                    -- (Counts below MIN_ZONE_LIST_COUNT never reach here at
-                    -- all -- excluded above.)
+                    -- isn't the same claim as zero).
+                    --
+                    -- REMOVED 2026-08-19 the ", might be spillover" text +
+                    -- rare-icon swap a confirmed low-count zone used to get
+                    -- here (IsZoneRareForTier) -- looked bad in practice
+                    -- once actually seen in game. Every zone that grows this
+                    -- tier still shows regardless of count (that
+                    -- reintegration stands), just with the same plain "(N)"
+                    -- and the same tier icon as everything else now --
+                    -- IsZoneRareForTier itself is untouched and still used
+                    -- elsewhere (SC.RefreshMapInfoText's "where to farm"
+                    -- filtering).
                     local countMarkup = ""
                     if tierData and tierData.zoneCounts and tierData.zoneCounts[zoneName] then
-                        local count = tierData.zoneCounts[zoneName]
-                        if IsZoneRareForTier(tierData, zoneName) then
-                            countMarkup = " (" .. count .. ", might be spillover)"
-                        else
-                            countMarkup = " (" .. count .. ")"
-                        end
+                        countMarkup = " (" .. tierData.zoneCounts[zoneName] .. ")"
                     end
                     info = {}
                     info.text = zoneName .. countMarkup

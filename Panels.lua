@@ -523,52 +523,122 @@ end
 -- craft at each skill range, plus the Journeyman/Expert/Artisan Survival
 -- rank-up gates in between), read straight from
 -- OctoSurvivalCompanion_Data.levelingGuide.sections. Static reference
--- content, not tied to your own chop/pet tracking -- built the same
--- scrolling-FontString way as the Trainers and Logbook tabs. See the big
--- comment above levelingGuide in Data.lua for the source, including a
--- correction it surfaced for rankSpells/trainers (now applied there).
+-- content, not tied to your own chop/pet tracking.
+--
+-- SPLIT 2026-08-19 from one long scroll into 4 folder sub-tabs (one per
+-- rank: Apprentice/Journeyman/Expert/Artisan), each still built the same
+-- scrolling-FontString way the Trainers and Logbook tabs use -- just one
+-- scroll+text pair per sub-tab instead of one for the whole guide, filtered
+-- by each section's `group` field (see the format comment above
+-- levelingGuide in Data.lua). The Apprentice sub-tab (first/starting one)
+-- also carries the tools list and the whole-path materials rollup, since
+-- neither is rank-specific -- see the note above that list's entry in
+-- Data.lua for why it stayed in its original array position instead of
+-- being physically moved next to the other Apprentice entries.
+--
+-- Sub-tabs are plain "UIPanelButtonTemplate" buttons + Enable()/Disable()
+-- for selected state -- the same pattern this addon's own top-level tab
+-- bar (SC.ShowTab/CreateTabButton in UI.lua) and the Map tab's continent
+-- tabs already use. Originally tried vanilla's real "TabButtonTemplate"
+-- folder-tab art plus PanelTemplates_SelectTab/DeselectTab for an
+-- authentic look -- abandoned 2026-08-19 after two separate unverifiable
+-- live-client failures in a row (a wrong-argument-order crash, then tabs
+-- locking up and refusing to switch once selected) -- see the note above
+-- CreateGuidePanel below for the full history.
 -- ============================================================
 
-local guideScroll, guideScrollContent, guideScrollText
+-- Order matters -- this is display/tab order left-to-right. "Supplies"
+-- (tools + the whole-path materials rollup, see Data.lua) leads since it's
+-- what you'd check before setting out -- ADDED 2026-08-19, split out of
+-- Apprentice once that tab got bloated carrying both the supply lists and
+-- its own step-by-step brackets. The other four still progress in rank-up
+-- order.
+local GUIDE_GROUPS = { "Supplies", "Apprentice", "Journeyman", "Expert", "Artisan" }
 
-local function CreateGuidePanel(parent)
-    guideScroll = CreateFrame("ScrollFrame", "OctoSurvivalCompanionGuideScroll", parent, "UIPanelScrollFrameTemplate")
-    guideScroll:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-    guideScroll:SetWidth(SC.PANEL_WIDTH - 30)
-    guideScroll:SetHeight(SC.PANEL_HEIGHT)
+local guideSubTabs = {}
+local guideSubScrollTexts = {}
+local guideSubScrollContents = {}
+local guideSubPanels = {}
+local guideSelectedTab = 1
 
-    guideScrollContent = CreateFrame("Frame", "OctoSurvivalCompanionGuideScrollChild", guideScroll)
-    guideScrollContent:SetWidth(SC.PANEL_WIDTH - 30)
-    guideScrollContent:SetHeight(1) -- resized below once we know the text height
+-- Builds one sub-tab's worth of lines: guide.source/sourceNote only on the
+-- first (Apprentice) tab, then every section whose `group` matches,
+-- rendered with the exact same per-type formatting the single-scroll
+-- version used.
+local function BuildGuideGroupLines(guide, groupKey, isFirstTab)
+    local lines = {}
+    if isFirstTab then
+        table.insert(lines, ColorText("Survival Leveling Guide", 1, 0.82, 0))
+        if guide.source then
+            table.insert(lines, ColorText("Source: " .. guide.source, 0.6, 0.6, 0.6))
+        end
+        if guide.sourceNote then
+            table.insert(lines, ColorText(guide.sourceNote, 0.55, 0.55, 0.5))
+        end
+    end
 
-    guideScrollText = guideScrollContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    guideScrollText:SetPoint("TOPLEFT", guideScrollContent, "TOPLEFT", 4, -4)
-    guideScrollText:SetWidth(SC.PANEL_WIDTH - 46)
-    guideScrollText:SetJustifyH("LEFT")
-    guideScrollText:SetJustifyV("TOP")
-
-    guideScroll:SetScrollChild(guideScrollContent)
-    SC.RefreshGuidePanel()
+    local i
+    for i = 1, table.getn(guide.sections) do
+        local section = guide.sections[i]
+        if section.group == groupKey then
+            table.insert(lines, " ")
+            if section.type == "header" then
+                table.insert(lines, ColorText(section.text, 1, 0.82, 0))
+            elseif section.type == "gate" then
+                table.insert(lines, ColorText(section.name, 0.9, 0.3, 0.3))
+                table.insert(lines, section.text)
+                if section.trainers then
+                    table.insert(lines, ColorText(section.trainers, 0.6, 0.8, 1))
+                end
+            elseif section.type == "bracket" then
+                local rangeLabel = ""
+                if section.range then
+                    rangeLabel = "[" .. section.range .. "]"
+                end
+                table.insert(lines, ColorText(rangeLabel, 0.6, 0.8, 1) .. "  " .. (section.craft or ""))
+                if section.note then
+                    table.insert(lines, ColorText(section.note, 0.6, 0.6, 0.6))
+                end
+            elseif section.type == "note" then
+                table.insert(lines, ColorText(section.text, 0.6, 0.6, 0.6))
+            elseif section.type == "list" then
+                if section.heading then
+                    table.insert(lines, ColorText(section.heading, 1, 0.82, 0))
+                end
+                if section.items then
+                    local j
+                    for j = 1, table.getn(section.items) do
+                        table.insert(lines, "  " .. section.items[j])
+                    end
+                end
+                if section.total then
+                    table.insert(lines, ColorText(section.total, 0.6, 0.8, 1))
+                end
+            end
+        end
+    end
+    return lines
 end
-SC.CreateGuidePanel = CreateGuidePanel
 
--- Rebuilds the Guide tab from Data.lua -- called once when the tab is
--- first built. Nothing here changes at runtime (it's not tied to your own
--- chop tracking), but this is still a function rather than inline
--- CreateGuidePanel code so a future /reload-free data edit (or a later
--- pass adding more of the guide) has somewhere to call back into.
+-- Rebuilds every sub-tab's text from Data.lua. Nothing here changes at
+-- runtime (it's not tied to your own chop tracking), but this stays a
+-- function rather than inline CreateGuidePanel code so a future
+-- /reload-free data edit has somewhere to call back into.
 function SC.RefreshGuidePanel()
-    if not guideScrollText then
+    if table.getn(guideSubScrollTexts) == 0 then
         return
     end
 
-    local lines = {}
-    table.insert(lines, ColorText("Survival Leveling Guide", 1, 0.82, 0))
-
     local guide = OctoSurvivalCompanion_Data and OctoSurvivalCompanion_Data.levelingGuide
-    if not guide or not guide.sections or table.getn(guide.sections) == 0 then
-        table.insert(lines, " ")
-        table.insert(lines, "No leveling guide on file yet.")
+    local g
+    for g = 1, table.getn(GUIDE_GROUPS) do
+        local lines
+        if not guide or not guide.sections or table.getn(guide.sections) == 0 then
+            lines = { "No leveling guide on file yet." }
+        else
+            lines = BuildGuideGroupLines(guide, GUIDE_GROUPS[g], g == 1)
+        end
+
         local full = ""
         local i
         for i = 1, table.getn(lines) do
@@ -577,65 +647,114 @@ function SC.RefreshGuidePanel()
             end
             full = full .. lines[i]
         end
-        guideScrollText:SetText(full)
-        guideScrollContent:SetHeight(guideScrollText:GetHeight() + 16)
-        return
+        guideSubScrollTexts[g]:SetText(full)
+        guideSubScrollContents[g]:SetHeight(guideSubScrollTexts[g]:GetHeight() + 16)
     end
-
-    if guide.source then
-        table.insert(lines, ColorText("Source: " .. guide.source, 0.6, 0.6, 0.6))
-    end
-    if guide.sourceNote then
-        table.insert(lines, ColorText(guide.sourceNote, 0.55, 0.55, 0.5))
-    end
-
-    local i
-    for i = 1, table.getn(guide.sections) do
-        local section = guide.sections[i]
-        table.insert(lines, " ")
-        if section.type == "header" then
-            table.insert(lines, ColorText(section.text, 1, 0.82, 0))
-        elseif section.type == "gate" then
-            table.insert(lines, ColorText(section.name, 0.9, 0.3, 0.3))
-            table.insert(lines, section.text)
-            if section.trainers then
-                table.insert(lines, ColorText(section.trainers, 0.6, 0.8, 1))
-            end
-        elseif section.type == "bracket" then
-            local rangeLabel = ""
-            if section.range then
-                rangeLabel = "[" .. section.range .. "]"
-            end
-            table.insert(lines, ColorText(rangeLabel, 0.6, 0.8, 1) .. "  " .. (section.craft or ""))
-            if section.note then
-                table.insert(lines, ColorText(section.note, 0.6, 0.6, 0.6))
-            end
-        elseif section.type == "note" then
-            table.insert(lines, ColorText(section.text, 0.6, 0.6, 0.6))
-        elseif section.type == "list" then
-            if section.heading then
-                table.insert(lines, ColorText(section.heading, 1, 0.82, 0))
-            end
-            if section.items then
-                local j
-                for j = 1, table.getn(section.items) do
-                    table.insert(lines, "  " .. section.items[j])
-                end
-            end
-            if section.total then
-                table.insert(lines, ColorText(section.total, 0.6, 0.8, 1))
-            end
-        end
-    end
-
-    local full = ""
-    for i = 1, table.getn(lines) do
-        if i > 1 then
-            full = full .. "\n"
-        end
-        full = full .. lines[i]
-    end
-    guideScrollText:SetText(full)
-
-    guideScrollContent:SetHeight(guideScrollText:GetHeight() + 16)
 end
+
+-- Selects one sub-tab. ORIGINALLY called PanelTemplates_SelectTab/
+-- DeselectTab (FrameXML UIPanelTemplates.lua) here for the persistent
+-- raised/sunk look those give a real folder tab -- REVERTED 2026-08-19,
+-- same day, after PanelTemplates_TabResize (called once per tab in
+-- CreateGuidePanel below) threw "attempt to index local `tab' (a number
+-- value)" in game. That's a positional-argument mismatch against this
+-- client's actual UIPanelTemplates.lua signature, guessed at without a way
+-- to verify it -- rather than keep guessing at the other two undocumented
+-- helpers too, this now uses only Enable()/Disable() for selected state,
+-- the same mechanism this addon's OWN top-level tab bar (SC.ShowTab in
+-- UI.lua) and the Map tab's continent tabs already use successfully. The
+-- tab buttons are still real CreateFrame(..., "TabButtonTemplate")
+-- buttons, so they still render actual folder-tab shaped art -- this just
+-- skips the extra persistent-selected-state polish PanelTemplates_SelectTab
+-- would otherwise add, in exchange for not crashing.
+function SC.ShowGuideSubTab(index)
+    guideSelectedTab = index
+    local i
+    for i = 1, table.getn(guideSubTabs) do
+        if i == index then
+            guideSubTabs[i]:Disable()
+            guideSubPanels[i]:Show()
+        else
+            guideSubTabs[i]:Enable()
+            guideSubPanels[i]:Hide()
+        end
+    end
+end
+
+-- Reserved height for the tab row before the scroll content starts.
+local GUIDE_TAB_ROW_HEIGHT = 30
+
+local function CreateGuidePanel(parent)
+    local prevTab
+    local g
+    for g = 1, table.getn(GUIDE_GROUPS) do
+        -- Explicit fresh local per iteration for the OnClick closure below
+        -- to capture, rather than the loop's own `g` directly -- ADDED
+        -- 2026-08-19 after every sub-tab was observed disabling/showing
+        -- tab 4 (the last one created) regardless of which was actually
+        -- clicked, the exact symptom of every closure sharing one mutated
+        -- variable instead of its own loop iteration's value. A numeric
+        -- `for` loop variable is supposed to be fresh each iteration in
+        -- Lua, verified true in a 5.4 interpreter here, but the actual
+        -- client runs Lua 5.0 and that couldn't be verified directly
+        -- against it -- this local makes the capture unambiguous either
+        -- way, independent of whichever behavior turns out to be true.
+        local tabIndex = g
+        -- ABANDONED 2026-08-19 "TabButtonTemplate" (a genuine folder-tab
+        -- look) after two separate live-client failures in a row it wasn't
+        -- possible to verify or debug from here: first a crash from a
+        -- guessed-wrong PanelTemplates_TabResize argument order, then
+        -- (after removing that call) the tabs locking up on click and
+        -- refusing to switch, with Disable()/Enable() -- the same pattern
+        -- used below via "UIPanelButtonTemplate" instead. That swap is what
+        -- fixed it: this addon's own top-level tab bar (SC.ShowTab, this
+        -- file's -- actually UI.lua's -- CreateTabButton) and the Map tab's
+        -- continent tabs already use UIPanelButtonTemplate + Enable/Disable
+        -- successfully today, so these sub-tabs now match that same proven
+        -- pattern instead of guessing at TabButtonTemplate's undocumented
+        -- quirks a third time. Loses the authentic folder-tab art in
+        -- exchange for actually working.
+        local tab = CreateFrame("Button", "OctoSurvivalCompanionGuideSubTab" .. g, parent, "UIPanelButtonTemplate")
+        tab:SetText(GUIDE_GROUPS[g])
+        tab:SetWidth(100)
+        tab:SetHeight(22)
+        if prevTab then
+            tab:SetPoint("TOPLEFT", prevTab, "TOPRIGHT", 4, 0)
+        else
+            tab:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, 0)
+        end
+        tab:SetScript("OnClick", function() SC.ShowGuideSubTab(tabIndex) end)
+        guideSubTabs[g] = tab
+        prevTab = tab
+
+        local sub = CreateFrame("Frame", nil, parent)
+        sub:SetWidth(SC.PANEL_WIDTH)
+        sub:SetHeight(SC.PANEL_HEIGHT - GUIDE_TAB_ROW_HEIGHT)
+        sub:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -GUIDE_TAB_ROW_HEIGHT)
+        sub:Hide()
+        guideSubPanels[g] = sub
+
+        local scroll = CreateFrame("ScrollFrame", "OctoSurvivalCompanionGuideSubScroll" .. g, sub, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", sub, "TOPLEFT", 0, 0)
+        scroll:SetWidth(SC.PANEL_WIDTH - 30)
+        scroll:SetHeight(SC.PANEL_HEIGHT - GUIDE_TAB_ROW_HEIGHT)
+
+        local content = CreateFrame("Frame", "OctoSurvivalCompanionGuideSubScrollChild" .. g, scroll)
+        content:SetWidth(SC.PANEL_WIDTH - 30)
+        content:SetHeight(1) -- resized in SC.RefreshGuidePanel once we know the text height
+        guideSubScrollContents[g] = content
+
+        local text = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        text:SetPoint("TOPLEFT", content, "TOPLEFT", 4, -4)
+        text:SetWidth(SC.PANEL_WIDTH - 46)
+        text:SetJustifyH("LEFT")
+        text:SetJustifyV("TOP")
+        guideSubScrollTexts[g] = text
+
+        scroll:SetScrollChild(content)
+    end
+
+    SC.RefreshGuidePanel()
+    SC.ShowGuideSubTab(1)
+end
+SC.CreateGuidePanel = CreateGuidePanel

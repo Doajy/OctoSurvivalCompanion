@@ -228,6 +228,24 @@ OctoSurvivalCompanion_Data = {
     --   { type = "gate", name, text, trainers }  -- a rank-up requirement (trainers optional)
     --   { type = "note", text }                  -- freeform guidance between brackets
     --   { type = "list", heading, items, total }  -- a labeled list of lines (tools, materials), total optional
+    -- Every entry also carries a `group` -- ADDED 2026-08-19 so the Guide
+    -- tab can split into folder tabs (Panels.lua's CreateGuidePanel) instead
+    -- of one long scroll. One of "Supplies"/"Apprentice"/"Journeyman"/
+    -- "Expert"/"Artisan". A gate's `group` is the rank you're IN when you
+    -- hit that requirement (e.g. the "Journeyman Survival" gate is
+    -- group = "Apprentice" -- it's what ends your time there), matching how
+    -- this list was already ordered before groups existed: each gate
+    -- immediately follows the brackets it gates.
+    --
+    -- The tools list and the whole-path materials rollup both get
+    -- group = "Supplies" -- REVISED 2026-08-19, same day: originally both
+    -- were group = "Apprentice" (first/starting tab, read the shopping list
+    -- before you set out), but that made the Apprentice tab bloated with
+    -- guide content AND supply lists at once, so they got their own tab
+    -- instead. "Supplies" sits FIRST in Panels.lua's GUIDE_GROUPS (before
+    -- Apprentice), same reasoning as before -- it's still the thing you'd
+    -- naturally check before setting out, just no longer sharing a tab with
+    -- the actual step-by-step brackets.
     levelingGuide = {
         source = "TurtleCraft forum \"Survival Skill Leveling Guide\" (forum.turtlecraft.gg, t=24572)",
         sourceNote = "Transcribed from user-provided screenshots of a web.archive.org capture, 2026-08-16 -- covers the full skill 1-300 path, plus the tools list and the forum's own aggregate materials list below. Copied as posted, not independently re-verified against octowow.st or in-game testing the way most of the rest of this file is -- see the correction note above for how it corrected rankSpells/trainers (now applied).",
@@ -238,52 +256,60 @@ OctoSurvivalCompanion_Data = {
             -- in most cities, like a Cooking Fire), not a carried item you
             -- buy from a vendor -- Blacksmith Hammer is the only one of the
             -- two that actually belongs on a "tools you need" shopping list.
-            { type = "list", heading = "Survival Tools You'll Need", items = {
+            { type = "list", group = "Supplies", heading = "Survival Tools You'll Need", items = {
                 "Whittle -- Survival Supplier, 50c",
                 "Woodcutting Axe -- Survival Supplier, 50c",
                 "Blacksmith Hammer -- Mining Supplier, 20c (needed for some recipes)",
                 "Cooking Fire and an Anvil -- needed for some recipes, but both are stationary objects (found at various spots in most cities), not carried tools you buy",
             } },
-            { type = "header", text = "1-75" },
-            { type = "bracket", range = "1-10", craft = "9x Dim Torches -- 9x Unlit Poor Torch" },
-            { type = "bracket", range = "10-15", craft = "30x Bundle of Simple Sticks -- 60x Simple Wood", note = "We are gunna need these bundles later." },
-            { type = "bracket", range = "15-35", craft = "20x Crude Walking Sticks -- 80x Simple Wood" },
-            { type = "bracket", range = "35-50", craft = "15x Simple Slingshots -- 60x Striped Melon Seeds, 30x Bundle of Simple Sticks, 15x Springy Rope", note = "These melon seeds can be found from farms in the Barrens, Durotar, Elwynn Forest or Redridge Mountains." },
-            { type = "bracket", range = "50-75", craft = "25x Weak Healing Salve -- 25x Refreshing Spring Water, 50x Remedy Herbs, 25x Simple Leaves" },
+            { type = "header", group = "Apprentice", text = "1-75" },
+            { type = "bracket", group = "Apprentice", range = "1-10", craft = "9x Dim Torches -- 9x Unlit Poor Torch" },
+            { type = "bracket", group = "Apprentice", range = "10-15", craft = "30x Bundle of Simple Sticks -- 60x Simple Wood", note = "We are gunna need these bundles later." },
+            { type = "bracket", group = "Apprentice", range = "15-35", craft = "20x Crude Walking Sticks -- 80x Simple Wood" },
+            { type = "bracket", group = "Apprentice", range = "35-50", craft = "15x Simple Slingshots -- 60x Striped Melon Seeds, 30x Bundle of Simple Sticks, 15x Springy Rope", note = "These melon seeds can be found from farms in the Barrens, Durotar, Elwynn Forest or Redridge Mountains." },
+            { type = "bracket", group = "Apprentice", range = "50-75", craft = "25x Weak Healing Salve -- 25x Refreshing Spring Water, 50x Remedy Herbs, 25x Simple Leaves" },
 
-            { type = "gate", name = "Journeyman Survival", text = "You can only train Survival past 75 if you learn Journeyman Survival. Every Survival trainer will teach you this skill. Requires character level 10 and Survival skill 50." },
+            { type = "gate", group = "Apprentice", name = "Journeyman Survival", text = "You can only train Survival past 75 if you learn Journeyman Survival. Every Survival trainer will teach you this skill. Requires character level 10 and Survival skill 50." },
 
-            { type = "header", text = "75-150" },
-            { type = "bracket", range = "75-100", craft = "25x Crude Fishing Rod -- 200x Simple Wood, 25x Fine Thread" },
-            { type = "bracket", range = "100-125", craft = "30x Simple Fishing Lure -- 30x Clam Meat, 30x Remedy Herbs", note = "Save Simple Fishing Lures for the next level range." },
-            { type = "bracket", range = "125-140", craft = "60x Bundle of Bright Wood Sticks -- 180x Bright Wood; 85x Sturdy Net -- 340x Sturdy Rope", note = "You need 45 Sturdy Nets for a few levels above and 40 Sturdy Nets to get from 280 to 300 later on." },
-            { type = "bracket", range = "140-155", craft = "30x Blackmouth Fishing Trap -- 60x Bundle of Bright Wood Sticks, 30x Simple Fishing Lure, 30x Sturdy Net" },
+            { type = "header", group = "Journeyman", text = "75-150" },
+            { type = "bracket", group = "Journeyman", range = "75-100", craft = "25x Crude Fishing Rod -- 200x Simple Wood, 25x Fine Thread" },
+            { type = "bracket", group = "Journeyman", range = "100-125", craft = "30x Simple Fishing Lure -- 30x Clam Meat, 30x Remedy Herbs", note = "Save Simple Fishing Lures for the next level range." },
+            { type = "bracket", group = "Journeyman", range = "125-140", craft = "60x Bundle of Bright Wood Sticks -- 180x Bright Wood; 85x Sturdy Net -- 340x Sturdy Rope", note = "You need 45 Sturdy Nets for a few levels above and 40 Sturdy Nets to get from 280 to 300 later on." },
+            { type = "bracket", group = "Journeyman", range = "140-155", craft = "30x Blackmouth Fishing Trap -- 60x Bundle of Bright Wood Sticks, 30x Simple Fishing Lure, 30x Sturdy Net" },
 
-            { type = "gate", name = "Expert Survival", text = "You can only train Survival past 150 if you learn Expert Survival. Not every Survival trainer will teach you this skill -- you have to find an Expert Survivalist. Requires character level 20 and Survival skill 150.", trainers = "Alliance: Nerean Stagtree (Desolace). Horde: Swampwalker Krug (Swamp of Sorrows)." },
+            { type = "gate", group = "Journeyman", name = "Expert Survival", text = "You can only train Survival past 150 if you learn Expert Survival. Not every Survival trainer will teach you this skill -- you have to find an Expert Survivalist. Requires character level 20 and Survival skill 150.", trainers = "Alliance: Nerean Stagtree (Desolace). Horde: Swampwalker Krug (Swamp of Sorrows)." },
 
-            { type = "header", text = "150-225" },
-            { type = "bracket", range = "155-160", craft = "5x Throwable Net -- 5x Sturdy Net, 20x Coarse Stone" },
-            { type = "bracket", range = "160-175", craft = "15x Slowing Bolas -- 45x Heavy Stone, 30x Sturdy Rope" },
-            { type = "bracket", range = "175-185", craft = "22x Bundle of Shade Wood Sticks -- 88x Shade Wood" },
-            { type = "bracket", range = "185-200", craft = "10x Spicy Fishing Lure -- 10x Tangy Clam Meat, 10x Hot Spices; 10x Firefin Fishing Trap -- 20x Bundle of Shade Wood, 10x Spicy Fishing Lure, 10x Sturdy Net", note = "This is the start of collecting items required for Artisan Survival past level 225." },
-            { type = "bracket", range = "200-210", craft = "10x Savory Fishing Lure -- 10x Zesty Clam Meat, 20x Soothing Spices" },
-            { type = "bracket", range = "210-215", craft = "5x (3)Nutritious Rations -- 10x Juicy Watermelon, 10x Sour Mountain Berry, 10x Plump Country Pumpkin" },
-            { type = "bracket", range = "215-217", craft = "2x Vine Cutter -- 20x Mithril Bar, 4x Solid Grinding Stone, 8x Thick Leather, 2x Bundle of Shade Wood Sticks" },
-            { type = "bracket", range = "217-225", craft = "8x (3)Nutritious Rations -- 16x Juicy Watermelon, 16x Sour Mountain Berry, 16x Plump Country Pumpkin; 10x Bundle of Tropical Sticks -- 50x Tropical Wood", note = "When you get to 225 you need to make the bundles above. The only way to learn Bundle of Tropical Sticks is from the Swamp of Sorrows or Desolace trainer." },
+            { type = "header", group = "Expert", text = "150-225" },
+            { type = "bracket", group = "Expert", range = "155-160", craft = "5x Throwable Net -- 5x Sturdy Net, 20x Coarse Stone" },
+            { type = "bracket", group = "Expert", range = "160-175", craft = "15x Slowing Bolas -- 45x Heavy Stone, 30x Sturdy Rope" },
+            { type = "bracket", group = "Expert", range = "175-185", craft = "22x Bundle of Shade Wood Sticks -- 88x Shade Wood" },
+            { type = "bracket", group = "Expert", range = "185-200", craft = "10x Spicy Fishing Lure -- 10x Tangy Clam Meat, 10x Hot Spices; 10x Firefin Fishing Trap -- 20x Bundle of Shade Wood, 10x Spicy Fishing Lure, 10x Sturdy Net", note = "This is the start of collecting items required for Artisan Survival past level 225." },
+            { type = "bracket", group = "Expert", range = "200-210", craft = "10x Savory Fishing Lure -- 10x Zesty Clam Meat, 20x Soothing Spices" },
+            { type = "bracket", group = "Expert", range = "210-215", craft = "5x (3)Nutritious Rations -- 10x Juicy Watermelon, 10x Sour Mountain Berry, 10x Plump Country Pumpkin" },
+            { type = "bracket", group = "Expert", range = "215-217", craft = "2x Vine Cutter -- 20x Mithril Bar, 4x Solid Grinding Stone, 8x Thick Leather, 2x Bundle of Shade Wood Sticks" },
+            { type = "bracket", group = "Expert", range = "217-225", craft = "8x (3)Nutritious Rations -- 16x Juicy Watermelon, 16x Sour Mountain Berry, 16x Plump Country Pumpkin; 10x Bundle of Tropical Sticks -- 50x Tropical Wood", note = "When you get to 225 you need to make the bundles above. The only way to learn Bundle of Tropical Sticks is from the Swamp of Sorrows or Desolace trainer." },
 
-            { type = "note", text = "Take these resources to Rufus Hardwick and accept the quest \"To Survive in the Jungle\" -- this is where he teaches you up to 300 Survival." },
-            { type = "gate", name = "Artisan Survival", text = "You can only train Survival past 225 if you learn Artisan Survival. Not every Survival trainer will teach you this skill -- you have to find an Artisan Survivalist. Requires character level 35 and Survival skill 225.", trainers = "Neutral: Rufus Hardwick (Stranglethorn Vale)." },
+            { type = "note", group = "Expert", text = "Take these resources to Rufus Hardwick and accept the quest \"To Survive in the Jungle\" -- this is where he teaches you up to 300 Survival." },
+            { type = "gate", group = "Expert", name = "Artisan Survival", text = "You can only train Survival past 225 if you learn Artisan Survival. Not every Survival trainer will teach you this skill -- you have to find an Artisan Survivalist. Requires character level 35 and Survival skill 225.", trainers = "Neutral: Rufus Hardwick (Stranglethorn Vale)." },
 
-            { type = "header", text = "225-300" },
-            { type = "bracket", range = "225-240", craft = "25x Bundle of Tropical Sticks -- 125x Tropical Wood" },
-            { type = "bracket", range = "240-260", craft = "20x Aromatic Berries -- 20x Sweet Mountain Berry, 20x Remedy Herbs, 40x Soothing Spices" },
-            { type = "bracket", range = "260-275", craft = "15x Smooth Ironfeather Arrows -- 15x Bundle of Tropical Sticks, 15x Ironfeather, 15x Thorium Bar" },
-            { type = "bracket", range = "275-290", craft = "20x Bundle of Star Wood Sticks -- 100x Star Wood; 10x Premium Fishing Lure -- 20x Zesty Clam Meat, 10x Molasses Firewater", note = "The ingredients above are for the Stonescale Fishing Trap needed to hit 300 next. Use the 50 Sturdy Nets you made at level 125, or make 20 more now." },
-            { type = "bracket", range = "290-300", craft = "10x Stonescale Fishing Trap -- 20x Bundle of Star Wood Sticks, 10x Premium Fishing Lure, 20x Sturdy Net" },
+            { type = "header", group = "Artisan", text = "225-300" },
+            { type = "bracket", group = "Artisan", range = "225-240", craft = "25x Bundle of Tropical Sticks -- 125x Tropical Wood" },
+            { type = "bracket", group = "Artisan", range = "240-260", craft = "20x Aromatic Berries -- 20x Sweet Mountain Berry, 20x Remedy Herbs, 40x Soothing Spices" },
+            { type = "bracket", group = "Artisan", range = "260-275", craft = "15x Smooth Ironfeather Arrows -- 15x Bundle of Tropical Sticks, 15x Ironfeather, 15x Thorium Bar" },
+            { type = "bracket", group = "Artisan", range = "275-290", craft = "20x Bundle of Star Wood Sticks -- 100x Star Wood; 10x Premium Fishing Lure -- 20x Zesty Clam Meat, 10x Molasses Firewater", note = "The ingredients above are for the Stonescale Fishing Trap needed to hit 300 next. Use the 50 Sturdy Nets you made at level 125, or make 20 more now." },
+            { type = "bracket", group = "Artisan", range = "290-300", craft = "10x Stonescale Fishing Trap -- 20x Bundle of Star Wood Sticks, 10x Premium Fishing Lure, 20x Sturdy Net" },
 
             -- This list is the forum's own aggregate rollup of the whole
             -- 1-300 path (its own heading says "Approximate"), transcribed
             -- as posted rather than recomputed from the brackets above --
+            -- group = "Supplies" below (NOT "Artisan", despite sitting
+            -- right after the Artisan brackets here) is deliberate: it's a
+            -- starting-out shopping list, not Artisan-specific content, so
+            -- it renders on its own Supplies sub-tab, not mixed in with
+            -- Artisan's step-by-step brackets. Left in its original array
+            -- position (source order, end of the transcribed guide) rather
+            -- than moved, since `group` alone controls which tab it renders
+            -- on.
             -- a couple of lines don't quite add up against them (e.g. this
             -- says 90x Remedy Herbs, the brackets above only sum to 80-100
             -- depending which ones you count), consistent with it being a
@@ -293,9 +319,21 @@ OctoSurvivalCompanion_Data = {
             -- looks like a copy/paste artifact rather than a real second
             -- requirement (only the 35-50 bracket above uses Melon Seeds,
             -- for 60 total) -- kept once here rather than doubled.
-            { type = "list", heading = "Approximate Materials Required (whole 1-300 path, the forum's own rollup)", items = {
+            --
+            -- DEVIATED FROM SOURCE 2026-08-19: the 5 raw wood lines
+            -- (Simple/Bright/Shade/Tropical/Star Wood) said "-- AH" in the
+            -- forum transcription same as everything else without a vendor
+            -- price, but this addon's whole other half (chop tracking, the
+            -- Map tab's spawn pips, Octo Node Scout) is built around
+            -- gathering wood yourself -- pointing at the AH for it here
+            -- would contradict that, so those 5 lines now point at chopping
+            -- instead. Left every other AH-sourced line as-is (Simple
+            -- Leaves included) -- untouched by the same reasoning, since
+            -- this is a Survival crafting guide, not a full self-sufficiency
+            -- one, and only wood was called out as already covered.
+            { type = "list", group = "Supplies", heading = "Approximate Materials Required (whole 1-300 path, the forum's own rollup)", items = {
                 "9x Unlit Poor Torch -- vendor 10c each (90c total)",
-                "340x Simple Wood -- AH",
+                "340x Simple Wood -- chop trees (tracked in the Logbook tab)",
                 "60x Striped Melon Seeds -- AH",
                 "15x Springy Rope -- vendor 85c each (12s 75c total)",
                 "25x Refreshing Spring Water -- vendor 25c each (3s 75c total)",
@@ -303,11 +341,11 @@ OctoSurvivalCompanion_Data = {
                 "25x Simple Leaves -- AH",
                 "25x Fine Thread -- vendor 1s each (25s total)",
                 "30x Clam Meat -- AH",
-                "180x Bright Wood -- AH",
+                "180x Bright Wood -- chop trees (tracked in the Logbook tab)",
                 "370x Sturdy Rope -- vendor 1s each (4g 10s total)",
                 "20x Coarse Stone -- AH",
                 "45x Heavy Stone -- AH",
-                "88x Shade Wood -- AH",
+                "88x Shade Wood -- chop trees (tracked in the Logbook tab)",
                 "10x Tangy Clam Meat -- AH",
                 "10x Hot Spices -- vendor 40c each (4s total)",
                 "30x Zesty Clam Meat -- AH",
@@ -317,12 +355,12 @@ OctoSurvivalCompanion_Data = {
                 "20x Mithril Bar -- AH",
                 "4x Solid Grinding Stone -- AH",
                 "8x Thick Leather -- AH",
-                "175x Tropical Wood -- AH",
+                "175x Tropical Wood -- chop trees (tracked in the Logbook tab)",
                 "20x Sweet Mountain Berry -- AH",
                 "60x Soothing Spices -- vendor 1s 60c each (96s total)",
                 "15x Ironfeather -- AH",
                 "15x Thorium Bar -- AH",
-                "100x Star Wood -- AH",
+                "100x Star Wood -- chop trees (tracked in the Logbook tab)",
                 "10x Molasses Firewater -- vendor 10s each (1g total)",
             }, total = "Total Vendor Cost: 6g 62s (AH-sourced items priced separately, not included in that total)" },
         },

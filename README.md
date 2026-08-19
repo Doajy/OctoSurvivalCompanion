@@ -33,17 +33,17 @@ yourself.
   no reveal artwork on file for either one client-side, not a bug in this
   addon, and the fogged look actually reads better for them anyway — see
   the note above `RefreshMapOverlay` in `Map.lua`.
-- **Honest about sparse zones, without drowning in them** — a zone with a
-  confirmed spawn count of 5–10 for a given tier (e.g. Un'Goro Crater's 5
-  known Dead Wood spawns) still shows in the zone dropdown, just with a
-  "(N, might be spillover)" flag instead of a plain "(N)" (see
-  `IsZoneRareForTier` in `Map.lua`), so you can see and pick it with a
-  clear heads-up. Below that — under 5 confirmed spawns (e.g. Balor's 3
-  known Bright Wood spawns) — the zone is left off the dropdown entirely
-  (`IsZoneTooRareToList`/`MIN_ZONE_LIST_COUNT`). This isn't a data-quality
-  call — some of these specific counts are individually re-verified as
-  genuinely real, not spillover — it's just "not worth a special trip
-  either way," trimming clutter from an already-long list.
+- **Honest about sparse zones, not hiding any of them** — every zone that
+  grows the tree tier you've picked shows in the zone dropdown, no matter
+  how low its confirmed spawn count. A zone at or below a confirmed count
+  of 10 for that tier (e.g. Un'Goro Crater's 5 known Dead Wood spawns, or
+  Balor's 3 known Bright Wood spawns) gets a "(N, might be spillover)" flag
+  instead of a plain "(N)", and a distinct question-mark icon in place of
+  the tier's own wood icon, so a rare zone reads as visually different at a
+  glance (see `IsZoneRareForTier`/`RARE_ZONE_ICON` in `Map.lua`) — not a
+  data-quality call, since some of these specific counts are individually
+  re-verified as genuinely real rather than spillover, just an honest
+  heads-up that it might not be worth a special trip.
 - **Logbook tab** — "every log you've logged, logged." Your full personal
   chop history: totals, a by-tier summary, a by-tree breakdown, and a
   companion-pet known/unknown summary. Nothing is pre-populated — it only
