@@ -1308,9 +1308,22 @@ OctoSurvivalCompanion_Data = {
                 -- Coast"] = 33 above is a SEPARATE, unrelated figure (the
                 -- octowow.st continent-relative scrape's own count) --
                 -- don't conflate the two or overwrite one from the other.
+                --
+                -- ADDED 2026-08-19 -- 5 more points from a second Octo Node
+                -- Scout session, a separate cluster east of the first
+                -- batch. No dedup needed this time -- that addon now
+                -- debounces auto-log so a tree's wood AND leaf loot lines
+                -- (two separate CHAT_MSG_LOOT messages) don't double-log
+                -- the same tree, the bug that caused the first batch's
+                -- 19-logged-down-to-10-distinct gap.
+                --
+                -- ADDED 2026-08-19 (2nd batch same day) -- 3 more points, a
+                -- third cluster further south (y~55-58) of the other two.
                 ["Moonwhisper Coast"] = {
                     {45.7,18.1}, {43.6,18.0}, {49.05,24.2}, {49.2,26.4}, {45.5,28.2},
                     {44.3,26.9}, {46.6,24.3}, {51.6,23.8}, {53.1,22.1}, {54.6,24.5},
+                    {62.55,35.97}, {63.98,36.29}, {65.57,34.58}, {60.03,37.58}, {61.66,36.89},
+                    {61.48,55.75}, {60.31,54.80}, {63.29,57.69},
                 },
             },
             -- ADDED 2026-08-17 -- the 33-point Moonwhisper Coast cluster

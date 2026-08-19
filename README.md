@@ -189,6 +189,22 @@ doesn't have specific seed names yet, though — there's an empty
 `gardening.seeds` table in `Data.lua` ready to fill in once you can see them
 in your own tradeskill window.
 
+## Filling in missing spawn pips (Octo Node Scout)
+
+Zones/tiers without pips on the Map tab (sparse octowow.st coverage, or the
+custom Turtle WoW zones it doesn't recognize at all) can be filled in by
+hand with **Octo Node Scout**, a separate standalone addon: walk up to a
+tree and it logs the exact zone-local position under that wood tier
+(auto-detected off the same wood/leaf loot message this addon's own chop
+tracker reads, or typed by hand with `/ons` for anything missed).
+
+That data gets merged into this addon's `Data.lua` **out of game**, not
+through any in-game import UI -- a first attempt at a live cross-addon
+import screen (`/scw nodes`) turned out fragile in practice and was
+removed. Instead: log trees in game, `/reload` or log out so the client
+flushes `OctoNodeScoutDB` to its `SavedVariables` file on disk, then read
+and merge that file's points into the right tier's `spawnPoints` directly.
+
 ## Contributing
 
 If you can confirm or correct any of the open questions above, open
