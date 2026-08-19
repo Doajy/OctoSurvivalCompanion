@@ -327,10 +327,15 @@ OctoSurvivalCompanion_Data = {
             -- Map tab's spawn pips, Octo Node Scout) is built around
             -- gathering wood yourself -- pointing at the AH for it here
             -- would contradict that, so those 5 lines now point at chopping
-            -- instead. Left every other AH-sourced line as-is (Simple
-            -- Leaves included) -- untouched by the same reasoning, since
-            -- this is a Survival crafting guide, not a full self-sufficiency
-            -- one, and only wood was called out as already covered.
+            -- instead. Simple Leaves got the same treatment same day, once
+            -- noticed -- it comes off the exact same Simple Wood Tree as
+            -- Simple Wood itself (woodTiers[1].leafItem in this file), so
+            -- "chop trees" applies to it too, not just the 5 wood lines.
+            -- Every OTHER AH-sourced line (Clam Meat, Coarse Stone, Sweet
+            -- Mountain Berry, etc.) is left as-is -- untouched by the same
+            -- reasoning, since this is a Survival crafting guide, not a
+            -- full self-sufficiency one, and only wood/leaves are things
+            -- this addon itself already tracks gathering.
             { type = "list", group = "Supplies", heading = "Approximate Materials Required (whole 1-300 path, the forum's own rollup)", items = {
                 "9x Unlit Poor Torch -- vendor 10c each (90c total)",
                 "340x Simple Wood -- chop trees (tracked in the Logbook tab)",
@@ -338,7 +343,7 @@ OctoSurvivalCompanion_Data = {
                 "15x Springy Rope -- vendor 85c each (12s 75c total)",
                 "25x Refreshing Spring Water -- vendor 25c each (3s 75c total)",
                 "90x Remedy Herbs -- vendor 12c each (9s 60c total)",
-                "25x Simple Leaves -- AH",
+                "25x Simple Leaves -- chop trees (tracked in the Logbook tab), same trees as Simple Wood",
                 "25x Fine Thread -- vendor 1s each (25s total)",
                 "30x Clam Meat -- AH",
                 "180x Bright Wood -- chop trees (tracked in the Logbook tab)",
