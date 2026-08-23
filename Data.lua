@@ -1362,11 +1362,28 @@ OctoSurvivalCompanion_Data = {
                 --
                 -- ADDED 2026-08-19 (2nd batch same day) -- 3 more points, a
                 -- third cluster further south (y~55-58) of the other two.
+                --
+                -- ADDED 2026-08-19 (3rd batch same day) -- 16 more distinct
+                -- points, mostly a walked route from ~(57,63) up through
+                -- ~(65,79) plus a few outliers. 5 raw logs collapsed to the
+                -- single point {54.83,77.55} here -- same tree (coords
+                -- within 0.05 of each other) chopped again on return visits
+                -- hours/days apart (timestamps ~31 hours apart at the
+                -- widest), not the wood+leaf-same-loot-window case the
+                -- addon's own debounce already handles -- a repeat visit to
+                -- an already-known spot doesn't add new location info, so
+                -- only one point kept. Everything else here checked
+                -- pairwise against both this batch and every earlier one
+                -- with nothing else closer than ~1 unit apart.
                 ["Moonwhisper Coast"] = {
                     {45.7,18.1}, {43.6,18.0}, {49.05,24.2}, {49.2,26.4}, {45.5,28.2},
                     {44.3,26.9}, {46.6,24.3}, {51.6,23.8}, {53.1,22.1}, {54.6,24.5},
                     {62.55,35.97}, {63.98,36.29}, {65.57,34.58}, {60.03,37.58}, {61.66,36.89},
                     {61.48,55.75}, {60.31,54.80}, {63.29,57.69},
+                    {56.87,63.17}, {54.31,62.66}, {67.41,56.95}, {68.30,54.85}, {66.79,67.16},
+                    {67.55,71.66}, {65.80,72.93}, {65.51,75.09}, {64.58,75.53}, {63.82,78.39},
+                    {59.86,79.31}, {54.83,77.55}, {57.18,73.14}, {54.11,67.81}, {60.98,62.38},
+                    {58.83,60.59},
                 },
             },
             -- ADDED 2026-08-17 -- the 33-point Moonwhisper Coast cluster
