@@ -752,6 +752,20 @@ OctoSurvivalCompanion_Data = {
 -- dropped as boundary-spillover (not in confirmed chopZones): Searing Gorge(2), Western Plaguelands(10), Alterac Mountains(1), Eastern Plaguelands(11)
 -- confirmed real zones with NO spawn-point data found: Blackstone Island, Thalassian Highlands
             spawnPoints = {
+                -- ADDED 2026-08-23 -- Blackstone Island's first REAL
+                -- zone-local spawn points, gathered in-game via Octo Node
+                -- Scout (see that addon's README) -- previously this zone
+                -- had NO spawnPoints entry at all for Simple (see the
+                -- "confirmed real zones with NO spawn-point data found"
+                -- note above woodTiers), only the continent-catchall
+                -- zoneCounts["Blackstone Island"] = 32 figure, which is a
+                -- SEPARATE, unrelated count (the octowow.st scrape's own
+                -- total, not zone-local coordinates) -- don't conflate the
+                -- two. 4 points so far, not remotely a full census -- keep
+                -- appending here as more get logged.
+                ["Blackstone Island"] = {
+                    {47.15,56.39}, {47.77,55.50}, {51.91,56.17}, {58.42,58.48},
+                },
                 Darkshore = {
                     {35.77,90.69}, {36.12,83.11}, {37.03,81.42}, {37.11,94.73}, {38.22,56.78}, {38.53,95.18}, {38.54,50.18}, {38.62,73.73},
                     {38.73,84.19}, {38.74,60.85}, {38.91,64.36}, {39.02,71.8}, {39.03,40.77}, {39.08,38.41}, {39.64,77.5}, {40.13,68.55},
